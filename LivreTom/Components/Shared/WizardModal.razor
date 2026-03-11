@@ -1,0 +1,149 @@
+﻿@using LivreTom.Models
+@using LivreTom.Services
+@inject QuestionService QuestionService
+@inject CreditService CreditService
+@inject MusicService MusicService
+@inject NavigationManager Nav
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden;">
+
+                @* Header com Progresso *@
+                <div class="modal-header bg-vibrant text-white border-0 p-4">
+                    <div>
+                        <h5 class="modal-title fw-black">Criando sua Música (@Category)</h5>
+                        <small class="opacity-75">Passo @(CurrentStepIndex + 1) de @Questions.Count</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body p-5">
+                    @if (Questions != null && Questions.Any())
+                    {
+                        var currentQuestion = Questions[CurrentStepIndex];
+
+                        <div class="question-container animate-fade-in">
+                            <h4 class="fw-bold mb-4 text-dark">@currentQuestion.QuestionText</h4>
+
+                            @if (currentQuestion.InputType == "textarea")
+                            {
+                                <textarea class="form-control custom-input" rows="4"
+                                          placeholder="Conte-nos mais..."
+                                          @bind="CurrentAnswer"></textarea>
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control custom-input"
+                                       placeholder="Sua resposta aqui..."
+                                       @bind="CurrentAnswer" />
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer border-0 p-4 bg-light d-flex justify-content-between">
+                    <button class="btn btn-link text-muted text-decoration-none fw-bold"
+                            @onclick="PreviousStep" disabled="@(CurrentStepIndex == 0)">
+                        VOLTAR
+                    </button>
+
+                    @if (CurrentStepIndex < Questions.Count - 1)
+                    {
+                        <button class="btn btn-dark rounded-pill px-4 fw-bold" @onclick="NextStep">
+                            PRÓXIMO
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-glow text-white rounded-pill px-4 fw-bold" @onclick="Finalize">
+                            GERAR MINHA MÚSICA <i class="bi bi-magic ms-2"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Category { get; set; } = "";
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<StepQuestion> Questions = new();
+    private Dictionary<string, string> Answers = new();
+    private int CurrentStepIndex = 0;
+    private string CurrentAnswer = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !string.IsNullOrEmpty(Category))
+        {
+            Questions = await QuestionService.GetQuestionsByCategoryAsync(Category);
+            CurrentStepIndex = 0;
+            Answers.Clear();
+            CurrentAnswer = "";
+        }
+    }
+
+    private void NextStep()
+    {
+        SaveCurrentAnswer();
+        if (CurrentStepIndex < Questions.Count - 1)
+        {
+            CurrentStepIndex++;
+            // Recupera resposta se o usuário já preencheu antes e voltou
+            Answers.TryGetValue(Questions[CurrentStepIndex].SystemKey, out var prevAnswer);
+            CurrentAnswer = prevAnswer ?? "";
+        }
+    }
+
+    private void PreviousStep()
+    {
+        SaveCurrentAnswer();
+        if (CurrentStepIndex > 0)
+        {
+            CurrentStepIndex--;
+            CurrentAnswer = Answers[Questions[CurrentStepIndex].SystemKey];
+        }
+    }
+
+    private void SaveCurrentAnswer()
+    {
+        var key = Questions[CurrentStepIndex].SystemKey;
+        if (Answers.ContainsKey(key)) Answers[key] = CurrentAnswer;
+        else Answers.Add(key, CurrentAnswer);
+    }
+
+    private async Task Finalize()
+    {
+        SaveCurrentAnswer();
+
+        // Por enquanto, como estamos sem login, vamos simular um UserId.
+        // Em breve, pegaremos o ID do usuário logado via AuthenticationState.
+        string testUserId = "id-do-seu-usuario-no-banco";
+
+        var result = await MusicService.CreateOrderAsync(testUserId, Category, Answers);
+
+        if (result.Success)
+        {
+            // Aqui você pode redirecionar para uma página de "Meus Pedidos"
+            Console.WriteLine(result.Message);
+            await Close();
+        }
+        else
+        {
+            // Aqui você poderia mostrar um erro de falta de crédito
+            Console.WriteLine("ERRO: " + result.Message);
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

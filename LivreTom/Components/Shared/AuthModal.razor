@@ -1,0 +1,98 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 24px;">
+                <div class="modal-body p-5">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-black">@Title</h3>
+                        <p class="text-muted small">@Subtitle</p>
+                    </div>
+
+                    @if (CurrentMode == AuthMode.Login)
+                    {
+                        @* --- FORMULÁRIO DE LOGIN --- *@
+                        <div class="mb-3">
+                            <input type="email" class="form-control custom-input mb-3" placeholder="E-mail" />
+                            <input type="password" class="form-control custom-input" placeholder="Senha" />
+                        </div>
+                        <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold mb-3">ENTRAR</button>
+
+                        <div class="text-center mb-4">
+                            <button class="btn btn-link text-muted small text-decoration-none" @onclick="() => SetMode(AuthMode.ForgotPassword)">Esqueci minha senha</button>
+                        </div>
+
+                        <div class="divider d-flex align-items-center mb-4">
+                            <hr class="flex-grow-1"> <span class="mx-3 text-muted small">OU</span> <hr class="flex-grow-1">
+                        </div>
+
+                        @* --- BOTÕES SOCIAIS --- *@
+                        <div class="d-flex flex-column gap-2">
+                            <a href="Account/login" class="btn btn-outline-dark rounded-pill py-2 fw-medium d-flex align-items-center justify-content-center gap-2">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" /> Entrar com Google
+                            </a>
+                            <button class="btn btn-outline-primary rounded-pill py-2 fw-medium d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-facebook"></i> Entrar com Facebook
+                            </button>
+                            <button class="btn btn-outline-dark rounded-pill py-2 fw-medium d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-apple"></i> Entrar com Apple
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <span class="small text-muted">Não tem conta?</span>
+                            <button class="btn btn-link text-primary small fw-bold text-decoration-none" @onclick="() => SetMode(AuthMode.Register)">Criar agora</button>
+                        </div>
+                    }
+                    else if (CurrentMode == AuthMode.Register)
+                    {
+                        @* --- FORMULÁRIO DE CADASTRO --- *@
+                        <input type="text" class="form-control custom-input mb-3" placeholder="Nome Completo" />
+                        <input type="email" class="form-control custom-input mb-3" placeholder="E-mail" />
+                        <input type="password" class="form-control custom-input mb-3" placeholder="Senha" />
+                        <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold mb-3">CRIAR CONTA</button>
+                        <button class="btn btn-link w-100 text-muted small" @onclick="() => SetMode(AuthMode.Login)">Voltar para Login</button>
+                    }
+                    else if (CurrentMode == AuthMode.ForgotPassword)
+                    {
+                        @* --- RECUPERAR SENHA --- *@
+                        <p class="small text-muted text-center mb-4">Enviaremos um link de recuperação para o seu e-mail.</p>
+                        <input type="email" class="form-control custom-input mb-3" placeholder="Seu e-mail" />
+                        <button class="btn btn-dark w-100 rounded-pill py-3 fw-bold mb-3">ENVIAR LINK</button>
+                        <button class="btn btn-link w-100 text-muted small" @onclick="() => SetMode(AuthMode.Login)">Voltar para Login</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    public enum AuthMode { Login, Register, ForgotPassword }
+    private AuthMode CurrentMode = AuthMode.Login;
+
+    private string Title => CurrentMode switch
+    {
+        AuthMode.Login => "Bem-vindo de volta",
+        AuthMode.Register => "Crie sua conta",
+        AuthMode.ForgotPassword => "Recuperar senha",
+        _ => ""
+    };
+
+    private string Subtitle => CurrentMode switch
+    {
+        AuthMode.Login => "Escolha como deseja acessar sua conta",
+        AuthMode.Register => "Comece sua jornada musical hoje",
+        AuthMode.ForgotPassword => "Não se preocupe, a gente ajuda",
+        _ => ""
+    };
+
+    private void SetMode(AuthMode mode) => CurrentMode = mode;
+    private Task Close() => OnClose.InvokeAsync();
+}

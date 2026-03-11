@@ -1,0 +1,172 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using LivreTom.Components.Shared
+@inject QuestionService QuestionService
+@inject NavigationManager Nav
+
+<PageTitle>LivreTom - Crie Música Sem Limites</PageTitle>
+
+<div class="main-wrapper position-relative">
+
+    @* --- MENU SUPERIOR --- *@
+    <nav class="top-nav d-flex justify-content-between align-items-center px-4 py-4 position-absolute w-100 z-3">
+        <div class="logo d-flex align-items-center gap-2 text-dark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-primary">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <span class="fw-black tracking-tight fs-5">LIVRETOM</span>
+        </div>
+
+        <div class="nav-links d-none d-md-flex gap-4">
+            <a href="#samples" class="text-dark text-decoration-none fw-medium small">Exemplos</a>
+            <a href="#manifesto" class="text-dark text-decoration-none fw-medium small">Como funciona</a>
+            <a href="#services" class="text-dark text-decoration-none fw-medium small">Serviços</a>
+        </div>
+
+        <div class="auth-buttons d-flex align-items-center gap-3">
+            <a @onclick="AbrirLogin" style="cursor:pointer" class="text-dark text-decoration-none fw-medium small d-none d-sm-block">Entrar</a>
+            <button class="btn btn-dark rounded-pill px-4 py-2 small fw-bold shadow-sm action-btn" @onclick='() => IniciarCriacao("Homenagem")'>Começar Agora</button>
+        </div>
+    </nav>
+
+    @* --- TELA 1: HERO --- *@
+    <section class="section-container vh-100 d-flex flex-column justify-content-center align-items-center text-center position-relative">
+        <h1 class="main-title mb-3">Crie Música<br />Sem Limites.</h1>
+        <p class="subtitle mx-auto mb-4 text-muted">Sua jornada musical começa aqui. Ferramentas intuitivas e sons profissionais.</p>
+        <button class="btn-glow rounded-pill px-5 py-3 shadow-lg text-white mb-5" @onclick='() => IniciarCriacao("Homenagem")'>COMEÇAR A CRIAR AGORA</button>
+
+        <a href="#samples" class="scroll-down-btn text-decoration-none text-muted position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+            <span class="small mb-1">Ouvir exemplos</span>
+            <i class="bi bi-chevron-down fs-5"></i>
+        </a>
+    </section>
+
+    @* --- TELA 2: SAMPLES --- *@
+    <section id="samples" class="section-container vh-100 d-flex flex-column justify-content-center align-items-center bg-vibrant position-relative">
+        <div class="container text-center text-white">
+            <h2 class="display-4 fw-black mb-5 mx-auto" style="max-width: 800px;">"A trilha sonora perfeita para os seus momentos."</h2>
+            <div class="row g-4 justify-content-center mt-4">
+                <div class="col-md-5">
+                    <div class="audio-card p-4 shadow-lg text-start">
+                        <span class="badge bg-white text-primary mb-2">Homenagem</span>
+                        <h5 class="fw-bold">Samba para o Vovô</h5>
+                        <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="audio-card p-4 shadow-lg text-start">
+                        <span class="badge bg-white text-info mb-2">Royalty Free</span>
+                        <h5 class="fw-bold">Cyberpunk Beats</h5>
+                        <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <a href="#manifesto" class="scroll-down-btn text-decoration-none text-white position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+            <span class="small mb-1">Como funciona?</span>
+            <i class="bi bi-chevron-down fs-5"></i>
+        </a>
+    </section>
+
+    @* --- TELA 3: MANIFESTO --- *@
+    <section id="manifesto" class="section-container vh-100 d-flex flex-column justify-content-center align-items-center text-center px-4 position-relative">
+        <h2 class="display-3 fw-black mb-4">A música nunca foi tão simples.</h2>
+        <p class="subtitle-large mx-auto text-secondary mb-5">Diga o que sente, escolha o ritmo e deixe a mágica acontecer.</p>
+        <div class="step-circles d-flex flex-wrap justify-content-center gap-4 mb-5">
+            <div class="step shadow-sm">1. Descreva sua ideia</div>
+            <div class="step shadow-sm">2. Escolha o estilo</div>
+            <div class="step shadow-sm">3. Receba sua música</div>
+        </div>
+        <a href="#services" class="scroll-down-btn text-decoration-none text-muted position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+            <span class="small mb-1">Ver todos os serviços</span>
+            <i class="bi bi-chevron-down fs-5"></i>
+        </a>
+    </section>
+
+    @* --- TELA 4: SERVIÇOS --- *@
+    <section id="services" class="section-container min-vh-100 py-5 container d-flex flex-column justify-content-center align-items-center">
+        <h2 class="section-title fw-bold mb-5 text-center mt-5">Tudo o que você pode criar</h2>
+
+        <div class="row g-4 justify-content-center w-100">
+            @foreach (var s in ServicosList)
+            {
+                <div class="col-md-4">
+                    @* Passamos o s.Title para a função para abrir a categoria certa *@
+                    <div class="feature-card p-4 text-center h-100 cursor-pointer border-0" @onclick='() => IniciarCriacao(s.Title)'>
+                        <div class="icon-circle mx-auto mb-3">@s.Icon</div>
+                        <h5 class="fw-bold text-dark">@s.Title</h5>
+                        <p class="text-muted small mb-0">@s.Desc</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="final-cta text-center mt-5 pt-5">
+            <h3 class="fw-black mb-4">Pronto para dar som à sua ideia?</h3>
+            <button class="btn-glow rounded-pill px-5 py-3 shadow-lg text-white" @onclick='() => IniciarCriacao("Homenagem")'>
+                CRIAR MINHA PRIMEIRA MÚSICA
+            </button>
+        </div>
+
+        @* CARROSSEL MARQUEE *@
+        <div class="marquee-container mt-5 pt-5 overflow-hidden w-100">
+            <div class="marquee-content d-flex gap-5 align-items-center">
+                <span>Samba Raiz</span> <span>Lo-fi Hip Hop</span> <span>Cinematic</span> <span>Trap</span> <span>Synthwave</span> <span>Bossa Nova</span>
+            </div>
+        </div>
+    </section>
+
+    @* --- RODAPÉ --- *@
+    <footer class="py-5 mt-5 border-top bg-white">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 text-center">
+            <div class="logo fw-black tracking-tight">LIVRETOM</div>
+            <p class="text-muted small mb-0">© 2026 LivreTom - Tecnologia a serviço da emoção.</p>
+        </div>
+    </footer>
+</div>
+
+<AuthModal IsVisible="showAuthModal" OnClose="() => showAuthModal = false" />
+
+@* MODAL DO QUESTIONÁRIO *@
+<WizardModal IsVisible="showWizard"
+             Category="@selectedCategory"
+             OnClose="() => showWizard = false" />
+
+@code {
+    private bool showAuthModal = false;
+
+    private void AbrirLogin()
+    {
+        showAuthModal = true;
+    }
+
+    private bool showWizard = false;
+    private string selectedCategory = "";
+
+    private void IniciarCriacao()
+    {
+        IniciarCriacao("Homenagem");
+    }
+
+    private void IniciarCriacao(string categoria)
+    {
+        // Ajuste para bater com o que está no Banco de Dados (ex: remover plural)
+        selectedCategory = categoria == "Homenagens" ? "Homenagem" :
+                           categoria == "Relaxamento" ? "Relaxamento" : categoria;
+
+        showWizard = true;
+    }
+
+    private List<ServiceItem> ServicosList = new() {
+        new("🎁", "Homenagens", "Transforme datas especiais em canções eternas e personalizadas."),
+        new("🧘", "Relaxamento", "Gere sons ambientes para foco, estudo ou meditação profunda."),
+        new("📹", "Criadores", "Trilhas exclusivas sem direitos autorais para seus vídeos."),
+        new("🪄", "Melhorar Áudio", "IA para tratar e melhorar a fidelidade de áudios brutos."),
+        new("↔️", "Versões Estendidas", "Transforme pequenos trechos em músicas completas."),
+        new("🎸", "Custom Solos", "Gere solos instrumentais específicos para suas produções.")
+    };
+
+    public record ServiceItem(string Icon, string Title, string Desc);
+}
