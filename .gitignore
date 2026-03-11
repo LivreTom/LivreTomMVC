@@ -1,0 +1,41 @@
+## --- Visual Studio ---
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs-code/
+.vscode/
+
+## --- .NET ---
+project.lock.json
+project.fragment.lock.json
+artifacts/
+publish/
+*.nupkg
+
+## --- User-specific files ---
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## --- Operating System ---
+[Dd]s.[Ss]tore
+Thumbs.db
+
+## --- Environment Variables ---
+# Muito importante: nunca subir senhas e segredos
+appsettings.Development.json
+appsettings.Local.json
+.env
+
+## --- JetBrains (Rider) ---
+.idea/
+*.sln.iml
+
+## --- Web / Node ---
+node_modules/
+.npm/

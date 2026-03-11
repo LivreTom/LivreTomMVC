@@ -96,3 +96,28 @@ main {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+}
+
+.nav-link.active {
+    opacity: 1 !important;
+    font-weight: bold;
+    color: #a25df5 !important;
+}
+
+.main-content {
+    overflow-y: auto;
+}
+
+.bg-vibrant {
+    background: linear-gradient(135deg, #6c9df0 0%, #a25df5 100%);
+}
+
+.user-avatar img {
+    border: 2px solid white;
+}

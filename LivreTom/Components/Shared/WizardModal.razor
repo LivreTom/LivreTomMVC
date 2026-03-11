@@ -1,8 +1,9 @@
 ﻿@using LivreTom.Models
 @using LivreTom.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject QuestionService QuestionService
-@inject CreditService CreditService
 @inject MusicService MusicService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 
 @if (IsVisible)
@@ -12,33 +13,37 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden;">
 
-                @* Header com Progresso *@
                 <div class="modal-header bg-vibrant text-white border-0 p-4">
                     <div>
-                        <h5 class="modal-title fw-black">Criando sua Música (@Category)</h5>
-                        <small class="opacity-75">Passo @(CurrentStepIndex + 1) de @Questions.Count</small>
+                        <h5 class="modal-title fw-black">Creating your Music (@Category)</h5>
+                        <small class="opacity-75">Step @(CurrentStepIndex + 1) of @Questions.Count</small>
                     </div>
                     <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
                 </div>
 
                 <div class="modal-body p-5">
-                    @if (Questions != null && Questions.Any())
+                    @if (Loading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <p class="fw-bold text-muted">Processing your request...</p>
+                        </div>
+                    }
+                    else if (Questions != null && Questions.Any())
                     {
                         var currentQuestion = Questions[CurrentStepIndex];
-
                         <div class="question-container animate-fade-in">
                             <h4 class="fw-bold mb-4 text-dark">@currentQuestion.QuestionText</h4>
-
                             @if (currentQuestion.InputType == "textarea")
                             {
                                 <textarea class="form-control custom-input" rows="4"
-                                          placeholder="Conte-nos mais..."
+                                          placeholder="Type your details here..."
                                           @bind="CurrentAnswer"></textarea>
                             }
                             else
                             {
                                 <input type="text" class="form-control custom-input"
-                                       placeholder="Sua resposta aqui..."
+                                       placeholder="Your answer..."
                                        @bind="CurrentAnswer" />
                             }
                         </div>
@@ -47,20 +52,28 @@
 
                 <div class="modal-footer border-0 p-4 bg-light d-flex justify-content-between">
                     <button class="btn btn-link text-muted text-decoration-none fw-bold"
-                            @onclick="PreviousStep" disabled="@(CurrentStepIndex == 0)">
-                        VOLTAR
+                            @onclick="PreviousStep" disabled="@(CurrentStepIndex == 0 || Loading)">
+                        BACK
                     </button>
 
                     @if (CurrentStepIndex < Questions.Count - 1)
                     {
-                        <button class="btn btn-dark rounded-pill px-4 fw-bold" @onclick="NextStep">
-                            PRÓXIMO
+                        <button class="btn btn-dark rounded-pill px-4 fw-bold" @onclick="NextStep" disabled="@Loading">
+                            NEXT
                         </button>
                     }
                     else
                     {
-                        <button class="btn-glow text-white rounded-pill px-4 fw-bold" @onclick="Finalize">
-                            GERAR MINHA MÚSICA <i class="bi bi-magic ms-2"></i>
+                        <button class="btn-glow text-white rounded-pill px-4 fw-bold" @onclick="Finalize" disabled="@Loading">
+                            @if (Loading)
+                            {
+                                <span>PLEASE WAIT...</span>
+                            }
+                            else
+                            {
+
+                                <span>GENERATE MUSIC <i class="bi bi-magic ms-2"></i></span>
+                            }
                         </button>
                     }
                 </div>
@@ -78,6 +91,7 @@
     private Dictionary<string, string> Answers = new();
     private int CurrentStepIndex = 0;
     private string CurrentAnswer = "";
+    private bool Loading = false;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -87,63 +101,50 @@
             CurrentStepIndex = 0;
             Answers.Clear();
             CurrentAnswer = "";
+            Loading = false;
         }
     }
 
-    private void NextStep()
-    {
-        SaveCurrentAnswer();
-        if (CurrentStepIndex < Questions.Count - 1)
-        {
-            CurrentStepIndex++;
-            // Recupera resposta se o usuário já preencheu antes e voltou
-            Answers.TryGetValue(Questions[CurrentStepIndex].SystemKey, out var prevAnswer);
-            CurrentAnswer = prevAnswer ?? "";
-        }
-    }
-
-    private void PreviousStep()
-    {
-        SaveCurrentAnswer();
-        if (CurrentStepIndex > 0)
-        {
-            CurrentStepIndex--;
-            CurrentAnswer = Answers[Questions[CurrentStepIndex].SystemKey];
-        }
-    }
+    private void NextStep() { SaveCurrentAnswer(); CurrentStepIndex++; LoadNextAnswer(); }
+    private void PreviousStep() { SaveCurrentAnswer(); CurrentStepIndex--; LoadNextAnswer(); }
 
     private void SaveCurrentAnswer()
     {
         var key = Questions[CurrentStepIndex].SystemKey;
-        if (Answers.ContainsKey(key)) Answers[key] = CurrentAnswer;
-        else Answers.Add(key, CurrentAnswer);
+        Answers[key] = CurrentAnswer;
+    }
+
+    private void LoadNextAnswer()
+    {
+        var key = Questions[CurrentStepIndex].SystemKey;
+        CurrentAnswer = Answers.ContainsKey(key) ? Answers[key] : "";
     }
 
     private async Task Finalize()
     {
+        Loading = true;
         SaveCurrentAnswer();
 
-        // Por enquanto, como estamos sem login, vamos simular um UserId.
-        // Em breve, pegaremos o ID do usuário logado via AuthenticationState.
-        string testUserId = "id-do-seu-usuario-no-banco";
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
-        var result = await MusicService.CreateOrderAsync(testUserId, Category, Answers);
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        if (result.Success)
-        {
-            // Aqui você pode redirecionar para uma página de "Meus Pedidos"
-            Console.WriteLine(result.Message);
-            await Close();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var result = await MusicService.CreateOrderAsync(userId, Category, Answers);
+
+                if (result.Success)
+                {
+                    await Close();
+                    Nav.NavigateTo("/my-orders"); // Redirecionando para a nova rota em inglês
+                }
+            }
         }
-        else
-        {
-            // Aqui você poderia mostrar um erro de falta de crédito
-            Console.WriteLine("ERRO: " + result.Message);
-        }
+        Loading = false;
     }
 
-    private async Task Close()
-    {
-        await OnClose.InvokeAsync();
-    }
+    private async Task Close() => await OnClose.InvokeAsync();
 }

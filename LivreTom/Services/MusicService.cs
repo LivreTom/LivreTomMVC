@@ -15,6 +15,15 @@ public class MusicService
         _creditService = creditService;
     }
 
+    // Busca todos os pedidos de um usuário específico para listar no Dashboard
+    public async Task<List<MusicOrder>> GetOrdersByUserAsync(string userId)
+    {
+        return await _context.MusicOrders
+            .Where(o => o.UserId == userId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<(bool Success, string Message)> CreateOrderAsync(string userId, string category, Dictionary<string, string> userAnswers)
     {
         // 1. Verificar e Consumir Crédito
@@ -31,7 +40,6 @@ public class MusicService
             Status = "Processando",
             CreatedAt = DateTime.Now,
             CreditsSpent = 1,
-            // Aqui você poderia montar um "Prompt Provisório" combinando as respostas
             FinalPrompt = $"Geração de {category} baseada em {userAnswers.Count} respostas."
         };
 
@@ -52,6 +60,6 @@ public class MusicService
 
         await _context.SaveChangesAsync();
 
-        return (true, "Pedido enviado com sucesso! Sua música está sendo composta.");
+        return (true, "Pedido enviado com sucesso!");
     }
 }

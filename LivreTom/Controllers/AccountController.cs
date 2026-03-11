@@ -32,7 +32,6 @@ public class AccountController : Controller
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null) return RedirectToAction("Login");
 
-        // Tenta logar o usuário se ele já existir
         var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: true);
 
         if (result.Succeeded)
@@ -40,9 +39,8 @@ public class AccountController : Controller
             return LocalRedirect(returnUrl);
         }
 
-        // Se não existe, vamos criar o usuário agora
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-        var user = new ApplicationUser { UserName = email, Email = email, Credits = 1 }; // 1 Crédito inicial aqui!
+        var user = new ApplicationUser { UserName = email, Email = email, Credits = 1 };
 
         var createResult = await _userManager.CreateAsync(user);
         if (createResult.Succeeded)
@@ -58,6 +56,12 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
-        return Redirect("/");
+
+        // Limpa cache para evitar "piscada" do navegador voltando no histórico
+        Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+        Response.Headers.Append("Pragma", "no-cache");
+        Response.Headers.Append("Expires", "0");
+
+        return Redirect("~/");
     }
 }

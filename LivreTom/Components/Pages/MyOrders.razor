@@ -1,0 +1,100 @@
+﻿@page "/my-orders"
+@using LivreTom.Models
+@using LivreTom.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject MusicService MusicService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Orders - LivreTom</PageTitle>
+
+<div class="container py-4 animate-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-black mb-0">My Orders</h2>
+            <p class="text-muted small">Track the status of your musical creations.</p>
+        </div>
+        <a href="/" class="btn btn-dark rounded-pill px-4">New Music</a>
+    </div>
+
+    @if (Orders == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Loading history...</p>
+        </div>
+    }
+    else if (!Orders.Any())
+    {
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 24px;">
+            <div class="mb-3 display-4">🎵</div>
+            <h5 class="fw-bold">No music here yet.</h5>
+            <p class="text-muted">Your compositions will appear here as soon as you make your first order.</p>
+            <a href="/" class="btn btn-vibrant text-white rounded-pill px-4 mt-2 shadow-sm">Start Creating</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive bg-white shadow-sm rounded-4 p-3">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr class="small text-uppercase text-muted">
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Description</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Orders)
+                    {
+                        <tr>
+                            <td class="fw-medium">@order.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge @GetStatusClass(order.Status) rounded-pill px-3 py-2">
+                                    @order.Status
+                                </span>
+                            </td>
+                            <td class="text-truncate" style="max-width: 300px;">@order.FinalPrompt</td>
+                            <td class="text-end">
+                                <button class="btn btn-light btn-sm rounded-circle"><i class="bi bi-eye"></i></button>
+                                @if (order.Status == "Concluído")
+                                {
+                                    <button class="btn btn-vibrant text-white btn-sm rounded-circle ms-1"><i class="bi bi-play-fill"></i></button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<MusicOrder>? Orders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Pega o ID do NameIdentifier (Claim padrão do Identity para o GUID do usuário)
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            Orders = await MusicService.GetOrdersByUserAsync(userId);
+        }
+    }
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "Processando" => "bg-warning text-dark",
+        "Concluído" => "bg-success",
+        "Erro" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
