@@ -10,6 +10,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 0. CONFIGURAÇÃO DA PORTA (Render)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://*:{port}");
+
 // 1. CONFIGURAÇÃO DO BANCO DE DADOS
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -18,7 +22,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // 2. CONFIGURAÇÃO DO IDENTITY
-// Usamos AddIdentity em vez de AddIdentityCore para garantir que todos os serviços de UI e Cookies sejam registrados
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireDigit = false;
@@ -32,7 +35,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 // 3. AUTENTICAÇÃO E GOOGLE
 builder.Services.AddAuthentication(options =>
 {
-    // Define que o esquema padrão de autenticação é o de Cookies do Identity
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
 })
@@ -41,22 +43,21 @@ builder.Services.AddAuthentication(options =>
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
 
-        // Mapeia o e-mail do Google para o UserName do Identity
         options.Events.OnTicketReceived = context =>
         {
             return Task.CompletedTask;
         };
     });
 
-// 4. CONFIGURAÇÃO DE COOKIES (Evita o problema de voltar deslogado)
+// 4. CONFIGURAÇÃO DE COOKIES
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
-    options.LoginPath = "/Account/login"; // Caminho do seu Controller
+    options.LoginPath = "/Account/login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.SlidingExpiration = true;
-    options.Cookie.SameSite = SameSiteMode.Lax; // Necessário para redirects externos
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 builder.Services.ConfigureExternalCookie(options =>
@@ -69,7 +70,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddControllers(); // Habilita o AccountController.cs
+builder.Services.AddControllers();
 
 // 6. NOSSOS SERVIÇOS DE NEGÓCIO (LIVRETOM)
 builder.Services.AddScoped<QuestionService>();
@@ -88,10 +89,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-app.UseRouting(); // Importante: Routing antes de Auth
+app.UseRouting();
 
-app.UseAuthentication(); // Autenticação vem primeiro
-app.UseAuthorization();  // Autorização vem depois
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 
@@ -99,6 +100,6 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapControllers(); // Mapeia o AccountController
+app.MapControllers();
 
 app.Run();
