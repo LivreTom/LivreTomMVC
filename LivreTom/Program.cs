@@ -7,7 +7,6 @@ using LivreTom.Components;
 using LivreTom.Services;
 using Microsoft.AspNetCore.Authentication.Google;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
-using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,29 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
-// 1. CONFIGURAÇÃO DO BANCO DE DADOS COM SSL (SUPABASE)
+// 1. CONFIGURAÇÃO DO BANCO DE DADOS
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Adicionar parâmetros SSL para Supabase se não estiverem presentes
-if (!connectionString.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase))
-{
-    connectionString += ";SSL Mode=Require;Trust Server Certificate=false";
-}
-
-// Garantir pooling adequado
-if (!connectionString.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
-{
-    connectionString += ";Pooling=true;MinPoolSize=0;MaxPoolSize=20";
-}
-
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
-
-// 1.1 CONFIGURAÇÃO DO DATA PROTECTION (RESOLVE O ERRO DE OAUTH)
-builder.Services.AddDataProtection()
-    .PersistKeysToDbContext<ApplicationDbContext>()
-    .SetApplicationName("LivreTom");
 
 // 2. CONFIGURAÇÃO DO IDENTITY
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {

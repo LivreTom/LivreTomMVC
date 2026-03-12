@@ -1,17 +1,11 @@
-﻿using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using LivreTom.Models;
 
 namespace LivreTom.Data;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    // Propriedade necessária para o DataProtection (resolve o erro de OAuth)
-    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
-
-    // Seus DbSets existentes
     public DbSet<MusicOrder> MusicOrders { get; set; }
     public DbSet<StepQuestion> StepQuestions { get; set; }
     public DbSet<UserAnswer> UserAnswers { get; set; }
