@@ -15,9 +15,15 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
-// 1. CONFIGURAÇÃO DO BANCO DE DADOS
+// 1. CONFIGURAÇÃO DO BANCO DE DADOS COM SSL
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// Garantir que SSL esteja configurado para o Render
+if (!connectionString.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase))
+{
+    connectionString += ";SSL Mode=Require;Trust Server Certificate=true";
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
