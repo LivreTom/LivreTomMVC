@@ -7,6 +7,7 @@ using LivreTom.Components;
 using LivreTom.Services;
 using Microsoft.AspNetCore.Authentication.Google;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// 1.1 CONFIGURAÇÃO DO DATA PROTECTION (RESOLVE O ERRO DE OAUTH)
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ApplicationDbContext>()
+    .SetApplicationName("LivreTom");
 
 // 2. CONFIGURAÇÃO DO IDENTITY
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
@@ -78,6 +84,21 @@ builder.Services.AddScoped<CreditService>();
 builder.Services.AddScoped<MusicService>();
 
 var app = builder.Build();
+
+// 6.1 CRIAR TABELA DE DATA PROTECTION NO BANCO (primeira execução)
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Erro ao aplicar migrations do banco de dados");
+    }
+}
 
 // 7. PIPELINE DE REQUISIÇÕES
 if (!app.Environment.IsDevelopment())
