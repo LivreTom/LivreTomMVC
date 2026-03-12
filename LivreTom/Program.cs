@@ -6,6 +6,7 @@ using LivreTom.Models;
 using LivreTom.Components;
 using LivreTom.Services;
 using Microsoft.AspNetCore.Authentication.Google;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 // 2. CONFIGURAÇÃO DO IDENTITY
 // Usamos AddIdentity em vez de AddIdentityCore para garantir que todos os serviços de UI e Cookies sejam registrados
