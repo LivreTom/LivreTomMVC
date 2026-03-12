@@ -85,21 +85,6 @@ builder.Services.AddScoped<MusicService>();
 
 var app = builder.Build();
 
-// 6.1 CRIAR TABELA DE DATA PROTECTION NO BANCO (primeira execução)
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    try
-    {
-        dbContext.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Erro ao aplicar migrations do banco de dados");
-    }
-}
-
 // 7. PIPELINE DE REQUISIÇÕES
 if (!app.Environment.IsDevelopment())
 {
