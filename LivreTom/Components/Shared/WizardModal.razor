@@ -1,0 +1,150 @@
+﻿@using LivreTom.Models
+@using LivreTom.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject QuestionService QuestionService
+@inject MusicService MusicService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden;">
+
+                <div class="modal-header bg-vibrant text-white border-0 p-4">
+                    <div>
+                        <h5 class="modal-title fw-black">Creating your Music (@Category)</h5>
+                        <small class="opacity-75">Step @(CurrentStepIndex + 1) of @Questions.Count</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+
+                <div class="modal-body p-5">
+                    @if (Loading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <p class="fw-bold text-muted">Processing your request...</p>
+                        </div>
+                    }
+                    else if (Questions != null && Questions.Any())
+                    {
+                        var currentQuestion = Questions[CurrentStepIndex];
+                        <div class="question-container animate-fade-in">
+                            <h4 class="fw-bold mb-4 text-dark">@currentQuestion.QuestionText</h4>
+                            @if (currentQuestion.InputType == "textarea")
+                            {
+                                <textarea class="form-control custom-input" rows="4"
+                                          placeholder="Type your details here..."
+                                          @bind="CurrentAnswer"></textarea>
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control custom-input"
+                                       placeholder="Your answer..."
+                                       @bind="CurrentAnswer" />
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer border-0 p-4 bg-light d-flex justify-content-between">
+                    <button class="btn btn-link text-muted text-decoration-none fw-bold"
+                            @onclick="PreviousStep" disabled="@(CurrentStepIndex == 0 || Loading)">
+                        BACK
+                    </button>
+
+                    @if (CurrentStepIndex < Questions.Count - 1)
+                    {
+                        <button class="btn btn-dark rounded-pill px-4 fw-bold" @onclick="NextStep" disabled="@Loading">
+                            NEXT
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-glow text-white rounded-pill px-4 fw-bold" @onclick="Finalize" disabled="@Loading">
+                            @if (Loading)
+                            {
+                                <span>PLEASE WAIT...</span>
+                            }
+                            else
+                            {
+
+                                <span>GENERATE MUSIC <i class="bi bi-magic ms-2"></i></span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Category { get; set; } = "";
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<StepQuestion> Questions = new();
+    private Dictionary<string, string> Answers = new();
+    private int CurrentStepIndex = 0;
+    private string CurrentAnswer = "";
+    private bool Loading = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !string.IsNullOrEmpty(Category))
+        {
+            Questions = await QuestionService.GetQuestionsByCategoryAsync(Category);
+            CurrentStepIndex = 0;
+            Answers.Clear();
+            CurrentAnswer = "";
+            Loading = false;
+        }
+    }
+
+    private void NextStep() { SaveCurrentAnswer(); CurrentStepIndex++; LoadNextAnswer(); }
+    private void PreviousStep() { SaveCurrentAnswer(); CurrentStepIndex--; LoadNextAnswer(); }
+
+    private void SaveCurrentAnswer()
+    {
+        var key = Questions[CurrentStepIndex].SystemKey;
+        Answers[key] = CurrentAnswer;
+    }
+
+    private void LoadNextAnswer()
+    {
+        var key = Questions[CurrentStepIndex].SystemKey;
+        CurrentAnswer = Answers.ContainsKey(key) ? Answers[key] : "";
+    }
+
+    private async Task Finalize()
+    {
+        Loading = true;
+        SaveCurrentAnswer();
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var result = await MusicService.CreateOrderAsync(userId, Category, Answers);
+
+                if (result.Success)
+                {
+                    await Close();
+                    Nav.NavigateTo("/my-orders"); // Redirecionando para a nova rota em inglês
+                }
+            }
+        }
+        Loading = false;
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+}

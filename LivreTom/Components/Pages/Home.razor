@@ -1,0 +1,201 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using LivreTom.Components.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+@inject QuestionService QuestionService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>LivreTom - Crie Música Sem Limites</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        @* --- CONTEÚDO PARA USUÁRIO LOGADO (DASHBOARD) --- *@
+        <div class="dashboard-home animate-fade-in">
+            <h2 class="fw-black mb-4">O que vamos criar hoje?</h2>
+            <div class="row g-4">
+                @foreach (var s in ServicosList)
+                {
+                    <div class="col-md-4">
+                        <div class="feature-card p-4 text-center h-100 cursor-pointer border-0 shadow-sm" @onclick='() => IniciarCriacao(s.Title)'>
+                            <div class="icon-circle mx-auto mb-3">@s.Icon</div>
+                            <h5 class="fw-bold text-dark">@s.Title</h5>
+                            <p class="text-muted small mb-0">@s.Desc</p>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="mt-5 p-5 border-dashed rounded-4 text-center text-muted">
+                <i class="bi bi-plus-circle fs-1 d-block mb-2"></i>
+                <p>Suas criações aparecerão aqui em breve.</p>
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        @* --- CONTEÚDO DA LANDING PAGE ORIGINAL (DESLOGADO) --- *@
+        <div class="main-wrapper position-relative">
+
+            <nav class="top-nav d-flex justify-content-between align-items-center px-4 py-4 position-absolute w-100 z-3">
+                <div class="logo d-flex align-items-center gap-2 text-dark">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-primary">
+                        <path d="M9 18V5l12-2v13"></path>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    <span class="fw-black tracking-tight fs-5">LIVRETOM</span>
+                </div>
+                <div class="nav-links d-none d-md-flex gap-4">
+                    <a href="#samples" class="text-dark text-decoration-none fw-medium small">Exemplos</a>
+                    <a href="#manifesto" class="text-dark text-decoration-none fw-medium small">Como funciona</a>
+                    <a href="#services" class="text-dark text-decoration-none fw-medium small">Serviços</a>
+                </div>
+                <div class="auth-buttons d-flex align-items-center gap-3">
+                    <a @onclick="AbrirLogin" style="cursor:pointer" class="text-dark text-decoration-none fw-medium small">Entrar</a>
+                    <button class="btn btn-dark rounded-pill px-4 py-2 small fw-bold shadow-sm" @onclick="AbrirLogin">Começar Agora</button>
+                </div>
+            </nav>
+
+            @* TELA 1: HERO *@
+            <section class="section-container vh-100 d-flex flex-column justify-content-center align-items-center text-center position-relative">
+                <h1 class="main-title mb-3">Crie Música<br />Sem Limites.</h1>
+                <p class="subtitle mx-auto mb-4 text-muted">Sua jornada musical começa aqui. Ferramentas intuitivas e sons profissionais.</p>
+                <button class="btn-glow rounded-pill px-5 py-3 shadow-lg text-white mb-5" @onclick="AbrirLogin">COMEÇAR A CRIAR AGORA</button>
+                <a href="#samples" class="scroll-down-btn text-decoration-none text-muted position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+                    <span class="small mb-1">Ouvir exemplos</span><i class="bi bi-chevron-down fs-5"></i>
+                </a>
+            </section>
+
+            @* TELA 2: SAMPLES *@
+            <section id="samples" class="section-container vh-100 d-flex flex-column justify-content-center align-items-center bg-vibrant position-relative">
+                <div class="container text-center text-white">
+                    <h2 class="display-4 fw-black mb-3">"A trilha sonora perfeita para os seus momentos."</h2>
+                    <p class="mx-auto mb-5 opacity-75" style="max-width: 600px;">Ouça o que a nossa tecnologia é capaz de criar em segundos, com qualidade de estúdio profissional.</p>
+
+                    <div class="row g-4 justify-content-center">
+                        <div class="col-md-4">
+                            <div class="audio-card p-4 shadow-lg text-start border-0">
+                                <span class="badge bg-white text-primary mb-2">Homenagem</span>
+                                <h5 class="fw-bold">Samba para o Vovô</h5>
+                                <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="audio-card p-4 shadow-lg text-start border-0">
+                                <span class="badge bg-white text-info mb-2">Relaxamento</span>
+                                <h5 class="fw-bold">Deep Meditation Loft</h5>
+                                <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="audio-card p-4 shadow-lg text-start border-0">
+                                <span class="badge bg-white text-success mb-2">Games</span>
+                                <h5 class="fw-bold">8-Bit Adventure</h5>
+                                <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <a href="#manifesto" class="scroll-down-btn text-decoration-none text-white position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+                    <span class="small mb-1">Como funciona?</span><i class="bi bi-chevron-down fs-5"></i>
+                </a>
+            </section>
+
+            @* TELA 3: MANIFESTO *@
+            <section id="manifesto" class="section-container vh-100 d-flex flex-column justify-content-center align-items-center text-center px-4 position-relative">
+                <h2 class="display-3 fw-black mb-4">A música nunca foi tão simples.</h2>
+                <p class="subtitle-large mx-auto text-secondary mb-5">Diga o que sente, escolha o ritmo e deixe a mágica acontecer.</p>
+                <div class="step-circles d-flex flex-wrap justify-content-center gap-4">
+                    <div class="step shadow-sm">1. Descreva sua ideia</div>
+                    <div class="step shadow-sm">2. Escolha o estilo</div>
+                    <div class="step shadow-sm">3. Receba sua música</div>
+                </div>
+                <a href="#services" class="scroll-down-btn text-decoration-none text-muted position-absolute bottom-0 mb-4 d-flex flex-column align-items-center">
+                    <span class="small mb-1">Ver serviços</span><i class="bi bi-chevron-down fs-5"></i>
+                </a>
+            </section>
+
+            @* TELA 4: SERVIÇOS *@
+            <section id="services" class="section-container min-vh-100 py-5 container d-flex flex-column justify-content-center align-items-center">
+                <h2 class="section-title fw-bold mb-5 text-center mt-5">Tudo o que você pode criar</h2>
+                <div class="row g-4 justify-content-center w-100">
+                    @foreach (var s in ServicosList)
+                    {
+                        <div class="col-md-4">
+                            <div class="feature-card p-4 text-center h-100 cursor-pointer border-0" @onclick="AbrirLogin">
+                                <div class="icon-circle mx-auto mb-3">@s.Icon</div>
+                                <h5 class="fw-bold text-dark">@s.Title</h5>
+                                <p class="text-muted small mb-0">@s.Desc</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* CARROSSEL MARQUEE (Loop Infinito) *@
+                <div class="marquee-container mt-5 pt-5 overflow-hidden w-100">
+                    <div class="marquee-content d-flex gap-5 align-items-center">
+                        <span>Samba Raiz</span> <span>Lo-fi Hip Hop</span> <span>Cinematic</span> <span>Trap</span> <span>Synthwave</span> <span>Bossa Nova</span>
+                        @* Duplicado para o loop ser imperceptível *@
+                        <span>Samba Raiz</span> <span>Lo-fi Hip Hop</span> <span>Cinematic</span> <span>Trap</span> <span>Synthwave</span> <span>Bossa Nova</span>
+                    </div>
+                </div>
+
+                <div class="final-cta text-center mt-5 pt-4">
+                    <h3 class="fw-black mb-4">Pronto para dar som à sua ideia?</h3>
+                    <button class="btn-glow rounded-pill px-5 py-3 shadow-lg text-white" @onclick="AbrirLogin">
+                        CRIAR MINHA PRIMEIRA MÚSICA
+                    </button>
+                </div>
+            </section>
+
+            <footer class="py-5 border-top bg-white">
+                <div class="container text-center">
+                    <div class="logo fw-black mb-2">LIVRETOM</div>
+                    <p class="text-muted small">© 2026 LivreTom - Tecnologia a serviço da emoção.</p>
+                </div>
+            </footer>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+<AuthModal IsVisible="showAuthModal" OnClose="() => showAuthModal = false" />
+<WizardModal IsVisible="showWizard" Category="@selectedCategory" OnClose="() => showWizard = false" />
+
+@code {
+    private bool showAuthModal = false;
+    private bool showWizard = false;
+    private string selectedCategory = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Força a verificação do estado ao inicializar a página
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == false)
+        {
+            // Garante que modais não fiquem abertos se o usuário deslogou
+            showAuthModal = false;
+            showWizard = false;
+        }
+    }
+
+    private void AbrirLogin() => showAuthModal = true;
+
+    private void IniciarCriacao(string categoria)
+    {
+        selectedCategory = categoria == "Homenagens" ? "Homenagem" : categoria;
+        showWizard = true;
+    }
+
+    private List<ServiceItem> ServicosList = new() {
+        new("🎁", "Homenagens", "Transforme datas especiais em canções eternas."),
+        new("🧘", "Relaxamento", "Gere sons ambientes para foco ou meditação."),
+        new("📹", "Criadores", "Trilhas exclusivas sem direitos autorais."),
+        new("🪄", "Melhorar Áudio", "IA para tratar e melhorar áudios brutos."),
+        new("↔️", "Versões Estendidas", "Transforme trechos em músicas completas."),
+        new("🎸", "Custom Solos", "Gere solos instrumentais específicos.")
+    };
+    public record ServiceItem(string Icon, string Title, string Desc);
+}

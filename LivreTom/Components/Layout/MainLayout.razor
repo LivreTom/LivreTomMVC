@@ -1,0 +1,76 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="page">
+    <AuthorizeView>
+        <Authorized>
+            @* --- DASHBOARD LAYOUT (LOGADO) --- *@
+            <div class="dashboard-wrapper d-flex">
+                <aside class="sidebar bg-dark text-white p-4 d-flex flex-column">
+                    <div class="logo mb-5 d-flex align-items-center gap-2">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                        <span class="fw-black fs-5">LIVRETOM</span>
+                    </div>
+
+                    <nav class="flex-grow-1">
+                        <ul class="list-unstyled">
+                            <li class="mb-3">
+                                <NavLink href="/" class="nav-link text-white opacity-75" Match="NavLinkMatch.All">
+                                    <i class="bi bi-house-door me-2"></i> Início
+                                </NavLink>
+                            </li>
+                            <li class="mb-3">
+                                <NavLink href="my-orders" class="nav-link text-white opacity-75">
+                                    <i class="bi bi-music-note-list me-2"></i> Meus Pedidos
+                                </NavLink>
+                            </li>
+                            <li class="mb-3">
+                                <NavLink href="my-songs" class="nav-link text-white opacity-75">
+                                    <i class="bi bi-collection-play me-2"></i> Minhas Músicas
+                                </NavLink>
+                            </li>
+                            <li class="mb-3">
+                                <NavLink href="profile" class="nav-link text-white opacity-75">
+                                    <i class="bi bi-person me-2"></i> Perfil
+                                </NavLink>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    <div class="credits-info p-3 rounded-4 bg-light text-dark mb-4 shadow-sm">
+                        <small class="d-block text-muted">Saldo de Créditos</small>
+                        <strong class="fs-4">1</strong>
+                        <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill fw-bold">Comprar mais</button>
+                    </div>
+
+                    @* FORMULÁRIO REAL DE LOGOUT - Força o navegador a sair do Blazor *@
+                    <form action="Account/logout" method="get">
+                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill w-100 mt-auto">Sair</button>
+                    </form>
+                </aside>
+
+                <main class="main-content flex-grow-1 bg-light min-vh-100">
+                    <header class="dashboard-header bg-white p-3 shadow-sm d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">Bem-vindo, @context.User.Identity?.Name?.Split('@')[0]!</h5>
+                        <div class="user-avatar rounded-circle bg-vibrant p-1 d-flex align-items-center justify-content-center text-white fw-bold" style="width: 40px; height: 40px;">
+                            @context.User.Identity?.Name?.Substring(0, 2).ToUpper()
+                        </div>
+                    </header>
+                    <div class="p-4">
+                        @Body
+                    </div>
+                </main>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            @* --- LANDING PAGE LAYOUT (DESLOGADO) --- *@
+            <main>
+                @Body
+            </main>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
