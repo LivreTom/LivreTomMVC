@@ -15,14 +15,20 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
-// 1. CONFIGURAÇÃO DO BANCO DE DADOS COM SSL
+// 1. CONFIGURAÇÃO DO BANCO DE DADOS COM SSL (SUPABASE)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Garantir que SSL esteja configurado para o Render
+// Adicionar parâmetros SSL para Supabase se não estiverem presentes
 if (!connectionString.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase))
 {
-    connectionString += ";SSL Mode=Require;Trust Server Certificate=true";
+    connectionString += ";SSL Mode=Require;Trust Server Certificate=false";
+}
+
+// Garantir pooling adequado
+if (!connectionString.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
+{
+    connectionString += ";Pooling=true;MinPoolSize=0;MaxPoolSize=20";
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
