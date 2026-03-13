@@ -18,25 +18,34 @@ public class EmailService(IConfiguration configuration)
         var client = new SmtpClient(host, port)
         {
             EnableSsl = true,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
             Credentials = new NetworkCredential(senderEmail, password),
-            Timeout = 10000
+            Timeout = 30000
         };
 
-        var message = new MailMessage
+        try
         {
-            From = new MailAddress(senderEmail, senderName),
-            Subject = "Redefinição de senha - LivreTom",
-            Body = $"""
-                <h2>Redefinição de senha</h2>
-                <p>Clique no link abaixo para redefinir sua senha:</p>
-                <a href="{resetLink}" target="_self">Redefinir minha senha</a>
-                <p>O link expira em 1 hora.</p>
-                <p>Se você não solicitou isso, ignore este e-mail.</p>
-                """,
-            IsBodyHtml = true
-        };
-        message.To.Add(toEmail);
+            var message = new MailMessage
+            {
+                From = new MailAddress(senderEmail, senderName),
+                Subject = "Redefinição de senha - LivreTom",
+                Body = $"""
+                    <h2>Redefinição de senha</h2>
+                    <p>Clique no link abaixo para redefinir sua senha:</p>
+                    <a href="{resetLink}" target="_self">Redefinir minha senha</a>
+                    <p>O link expira em 1 hora.</p>
+                    <p>Se você não solicitou isso, ignore este e-mail.</p>
+                    """,
+                IsBodyHtml = true
+            };
+            message.To.Add(toEmail);
 
-        await client.SendMailAsync(message);
+            await client.SendMailAsync(message);
+        }
+        finally
+        {
+            client.Dispose();
+        }
     }
 }
