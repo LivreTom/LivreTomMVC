@@ -80,14 +80,9 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
-        // Pega o ID do NameIdentifier (Claim padrão do Identity para o GUID do usuário)
         var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
         if (!string.IsNullOrEmpty(userId))
-        {
             Orders = await MusicService.GetOrdersByUserAsync(userId);
-        }
     }
 
     private string GetStatusClass(string status) => status switch

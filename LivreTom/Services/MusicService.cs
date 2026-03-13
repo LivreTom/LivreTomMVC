@@ -4,21 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LivreTom.Services;
 
-public class MusicService
+public class MusicService(ApplicationDbContext context, CreditService creditService)
 {
-    private readonly ApplicationDbContext _context;
-    private readonly CreditService _creditService;
-
-    public MusicService(ApplicationDbContext context, CreditService creditService)
-    {
-        _context = context;
-        _creditService = creditService;
-    }
-
-    // Busca todos os pedidos de um usuário específico para listar no Dashboard
     public async Task<List<MusicOrder>> GetOrdersByUserAsync(string userId)
     {
-        return await _context.MusicOrders
+        return await context.MusicOrders
             .Where(o => o.UserId == userId)
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
@@ -26,14 +16,10 @@ public class MusicService
 
     public async Task<(bool Success, string Message)> CreateOrderAsync(string userId, string category, Dictionary<string, string> userAnswers)
     {
-        // 1. Verificar e Consumir Crédito
-        var creditConsumed = await _creditService.ConsumeCreditAsync(userId);
+        var creditConsumed = await creditService.ConsumeCreditAsync(userId);
         if (!creditConsumed)
-        {
             return (false, "Você não possui créditos suficientes.");
-        }
 
-        // 2. Criar o Pedido Principal
         var order = new MusicOrder
         {
             UserId = userId,
@@ -43,10 +29,8 @@ public class MusicService
             FinalPrompt = $"Geração de {category} baseada em {userAnswers.Count} respostas."
         };
 
-        _context.MusicOrders.Add(order);
-        await _context.SaveChangesAsync(); // Salva para gerar o ID do pedido
-
-        // 3. Salvar as Respostas Detalhadas
+        context.MusicOrders.Add(order);
+        await context.SaveChangesAsync();
         foreach (var answer in userAnswers)
         {
             var userAnswer = new UserAnswer
@@ -55,10 +39,10 @@ public class MusicService
                 QuestionKey = answer.Key,
                 Answer = answer.Value
             };
-            _context.UserAnswers.Add(userAnswer);
+            context.UserAnswers.Add(userAnswer);
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         return (true, "Pedido enviado com sucesso!");
     }

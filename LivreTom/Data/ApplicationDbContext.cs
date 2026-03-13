@@ -14,7 +14,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
-        // Configuração para garantir que créditos padrão sejam 1 ao criar conta
         builder.Entity<ApplicationUser>()
             .Property(u => u.Credits)
             .HasDefaultValue(1);

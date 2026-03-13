@@ -3,107 +3,81 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using LivreTom.Data;
 using LivreTom.Models;
-using LivreTom.Components;
 using LivreTom.Services;
-using Microsoft.AspNetCore.Authentication.Google;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
+using LivreTom.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 0. CONFIGURAÇÃO DA PORTA (Render)
-var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-builder.WebHost.UseUrls($"http://*:{port}");
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
 
-// 1. CONFIGURAÇÃO DO BANCO DE DADOS
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    ?? throw new InvalidOperationException("Connection string not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// 2. CONFIGURAÇÃO DO IDENTITY
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
-    options.SignIn.RequireConfirmedAccount = false;
-    options.Password.RequireDigit = false;
-    options.Password.RequiredLength = 6;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-})
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-
-// 3. AUTENTICAÇÃO E GOOGLE
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-})
+builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
-
-        options.Events.OnTicketReceived = context =>
-        {
-            return Task.CompletedTask;
-        };
     });
 
-// 4. CONFIGURAÇÃO DE COOKIES
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
+    options.SignIn.RequireConfirmedAccount = false;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireDigit = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.LoginPath = "/Account/login";
-    options.AccessDeniedPath = "/Account/AccessDenied";
     options.SlidingExpiration = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-builder.Services.ConfigureExternalCookie(options =>
-{
-    options.Cookie.SameSite = SameSiteMode.Lax;
-});
-
-// 5. SERVIÇOS DO BLAZOR E INTERFACE
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddControllers();
 
-// 6. NOSSOS SERVIÇOS DE NEGÓCIO (LIVRETOM)
+// Suporte para Antiforgery nos formulários do Modal
+builder.Services.AddControllersWithViews();
+builder.Services.AddAntiforgery();
+
+// Infraestrutura
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthenticationStateService>();
+
+// Serviços de negócio
 builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<CreditService>();
 builder.Services.AddScoped<MusicService>();
+builder.Services.AddScoped<EmailService>();
 
 var app = builder.Build();
 
-// 7. PIPELINE DE REQUISIÇÕES
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-
+app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseAntiforgery();
 
-// 8. MAPEAMENTO DE ENDPOINTS
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
 app.MapControllers();
 
 app.Run();
