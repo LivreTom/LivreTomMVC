@@ -18,7 +18,8 @@ public class EmailService(IConfiguration configuration)
         var client = new SmtpClient(host, port)
         {
             EnableSsl = true,
-            Credentials = new NetworkCredential(senderEmail, password)
+            Credentials = new NetworkCredential(senderEmail, password),
+            Timeout = 10000
         };
 
         var message = new MailMessage
