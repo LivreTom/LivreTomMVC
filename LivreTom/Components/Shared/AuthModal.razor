@@ -127,12 +127,11 @@
                                 <span id="forgot-loading" class="d-none spinner-border spinner-border-sm me-2" role="status"></span>
                                 <span id="forgot-text">ENVIAR LINK</span>
                             </button>
-
-                            <button class="btn btn-link w-100 text-muted small text-decoration-none"
-                                    @onclick="() => SetMode(AuthMode.Login)">
-                                Voltar para Login
-                            </button>
                         </form>
+                        <button class="btn btn-link w-100 text-muted small text-decoration-none"
+                                @onclick="() => SetMode(AuthMode.Login)">
+                            Voltar para Login
+                        </button>
                     }
                     else if (CurrentMode == AuthMode.ResetPassword)
                     {
