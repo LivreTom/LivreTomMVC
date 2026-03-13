@@ -5,6 +5,7 @@ using LivreTom.Data;
 using LivreTom.Models;
 using LivreTom.Services;
 using LivreTom.Components;
+using Resend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +63,8 @@ builder.Services.AddScoped<AuthenticationStateService>();
 builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<CreditService>();
 builder.Services.AddScoped<MusicService>();
+builder.Services.AddSingleton<IResend>(_ =>
+    ResendClient.Create(builder.Configuration["Resend:ApiKey"]!));
 builder.Services.AddScoped<EmailService>();
 
 var app = builder.Build();
@@ -76,7 +79,6 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 

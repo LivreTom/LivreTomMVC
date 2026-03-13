@@ -112,6 +112,7 @@ public class AccountController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ForgotPassword([FromForm] string email, [FromServices] EmailService emailService)
     {
+        email = "livretom0419@gmail.com"; //Remover ao resolver dominio resend
         var user = await userManager.FindByEmailAsync(email);
         if (user != null)
         {

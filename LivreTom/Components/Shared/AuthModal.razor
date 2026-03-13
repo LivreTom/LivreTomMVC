@@ -114,17 +114,20 @@
                     {
                         <form action="Account/forgot-password" method="post" onsubmit="handleFormSubmit('forgot-btn', 'forgot-loading', 'Enviando...')">
                             <AntiforgeryToken />
+
+                            @* Campo desbloqueado - descomentar quando tiver domínio verificado no Resend *@
+                            @* <input name="email" type="email" class="form-control custom-input mb-3 shadow-none"
+                                      placeholder="Seu e-mail cadastrado" required /> *@
+
+                            @* Temporário: fixado até verificar domínio no Resend *@
                             <input name="email" type="email" class="form-control custom-input mb-3 shadow-none"
-                                   placeholder="Seu e-mail cadastrado" required />
+                                   value="livretom0419@gmail.com" readonly />
+
                             <button id="forgot-btn" type="submit" class="btn btn-dark w-100 rounded-pill py-3 fw-bold mb-3 shadow-sm">
                                 <span id="forgot-loading" class="d-none spinner-border spinner-border-sm me-2" role="status"></span>
                                 <span id="forgot-text">ENVIAR LINK</span>
                             </button>
                         </form>
-                        <button class="btn btn-link w-100 text-muted small text-decoration-none"
-                                @onclick="() => SetMode(AuthMode.Login)">
-                            Voltar para Login
-                        </button>
                     }
                     else if (CurrentMode == AuthMode.ResetPassword)
                     {
