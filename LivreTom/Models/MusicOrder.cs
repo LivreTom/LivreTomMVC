@@ -9,7 +9,9 @@ public class MusicOrder
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public string Status { get; set; } = "Pendente";
     public string? ResultUrl { get; set; }
-
+    public string? AudioUrl { get; set; }  // Link para o MP3 (Azure Blob ou AWS S3)
+    public string? Lyrics { get; set; }    // A letra gerada pela IA
+    public string? CoverImageUrl { get; set; } // Imagem da "capa" do álbum
     public virtual ApplicationUser? User { get; set; }
     public virtual ICollection<UserAnswer> Answers { get; set; } = new List<UserAnswer>();
 }
