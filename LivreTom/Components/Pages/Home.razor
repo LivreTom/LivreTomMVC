@@ -55,7 +55,7 @@
                 </div>
                 <div class="auth-buttons d-flex align-items-center gap-3">
                     <a @onclick="AbrirLogin" style="cursor:pointer" class="text-dark text-decoration-none fw-medium small">Entrar</a>
-                    <button class="btn btn-dark rounded-pill px-4 py-2 small fw-bold shadow-sm" @onclick="AbrirLogin">Fazer Orçamento</button>
+                    <button class="btn btn-dark rounded-pill px-4 py-2 small fw-bold shadow-sm" @onclick="AbrirRegister">Cadastre-se</button>
                 </div>
             </nav>
 
@@ -159,11 +159,13 @@
     </NotAuthorized>
 </AuthorizeView>
 
-<AuthModal IsVisible="showAuthModal" OnClose="HandleAuthClose" InitialError="@(clearMessages ? "" : AuthService.LoginError)" InitialMode="@(clearMessages? AuthMode.Login: AuthService.AuthMode)" />
+<AuthModal IsVisible="showAuthModal" OnClose="HandleLoginClose" InitialError="@(clearMessages ? "" : AuthService.LoginError)" InitialMode="@(clearMessages? AuthMode.Login: AuthService.AuthMode)" />
+<AuthModal IsVisible="showRegisterModal" OnClose="HandleRegisterClose" InitialError="@(clearMessages ? "" : AuthService.LoginError)" InitialMode="@(clearMessages ? AuthMode.Register : AuthService.AuthMode)" />
 <WizardModal IsVisible="showWizard" Category="@selectedCategory" OnClose="() => showWizard = false" />
 
 @code {
     private bool showAuthModal = false;
+    private bool showRegisterModal = false;
     private bool showWizard = false;
     private string selectedCategory = "";
     private bool clearMessages = false;
@@ -184,9 +186,23 @@
         showAuthModal = true;
     }
 
-    private void HandleAuthClose()
+    private void AbrirRegister()
+    {
+        AuthService.ClearErrors();
+        clearMessages = true;
+        showRegisterModal = true;
+    }
+
+    private void HandleLoginClose()
     {
         showAuthModal = false;
+        clearMessages = false;
+        AuthService.ClearErrors();
+    }
+
+    private void HandleRegisterClose()
+    {
+        showRegisterModal = false;
         clearMessages = false;
         AuthService.ClearErrors();
     }
