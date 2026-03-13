@@ -3,49 +3,50 @@ using System.Net.Mail;
 
 namespace LivreTom.Services;
 
-public class EmailService(IConfiguration configuration)
+public class EmailService(IConfiguration configuration, ILogger<EmailService> logger)
 {
-    private readonly IConfiguration _config = configuration;
-
     public async Task SendPasswordResetAsync(string toEmail, string resetLink)
     {
-        var host = _config["Email:SmtpHost"]!;
-        var port = int.Parse(_config["Email:SmtpPort"]!);
-        var senderEmail = _config["Email:SenderEmail"]!;
-        var senderName = _config["Email:SenderName"]!;
-        var password = _config["Email:Password"]!;
+        var host = configuration["Email:SmtpHost"]!;
+        var port = int.Parse(configuration["Email:SmtpPort"]!);
+        var senderEmail = configuration["Email:SenderEmail"]!;
+        var senderName = configuration["Email:SenderName"]!;
+        var password = configuration["Email:Password"]!;
 
-        var client = new SmtpClient(host, port)
+        using var client = new SmtpClient(host, port)
         {
             EnableSsl = true,
             DeliveryMethod = SmtpDeliveryMethod.Network,
             UseDefaultCredentials = false,
             Credentials = new NetworkCredential(senderEmail, password),
-            Timeout = 30000
+            Timeout = 60000
         };
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(senderEmail, senderName),
+            Subject = "Redefinição de senha - LivreTom",
+            Body = $"""
+                <h2>Redefinição de senha</h2>
+                <p>Clique no link abaixo para redefinir sua senha:</p>
+                <a href="{resetLink}" target="_self">Redefinir minha senha</a>
+                <p>O link expira em 1 hora.</p>
+                <p>Se você não solicitou isso, ignore este e-mail.</p>
+                """,
+            IsBodyHtml = true
+        };
+        message.To.Add(toEmail);
 
         try
         {
-            var message = new MailMessage
-            {
-                From = new MailAddress(senderEmail, senderName),
-                Subject = "Redefinição de senha - LivreTom",
-                Body = $"""
-                    <h2>Redefinição de senha</h2>
-                    <p>Clique no link abaixo para redefinir sua senha:</p>
-                    <a href="{resetLink}" target="_self">Redefinir minha senha</a>
-                    <p>O link expira em 1 hora.</p>
-                    <p>Se você não solicitou isso, ignore este e-mail.</p>
-                    """,
-                IsBodyHtml = true
-            };
-            message.To.Add(toEmail);
-
-            await client.SendMailAsync(message);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await client.SendMailAsync(message, cts.Token);
+            logger.LogInformation("Email de reset enviado para {Email}", toEmail);
         }
-        finally
+        catch (Exception ex)
         {
-            client.Dispose();
+            logger.LogError(ex, "Erro ao enviar email de reset para {Email}", toEmail);
+            throw;
         }
     }
 }
