@@ -8,6 +8,9 @@ using LivreTom.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+builder.WebHost.UseUrls($"http://*:{port}");
+
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -68,7 +71,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 
