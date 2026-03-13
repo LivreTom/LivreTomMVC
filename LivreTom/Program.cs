@@ -12,6 +12,7 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
+builder.Configuration.AddEnvironmentVariables();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string not found.");
