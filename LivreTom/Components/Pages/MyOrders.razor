@@ -1,95 +1,324 @@
 ﻿@page "/my-orders"
-@using LivreTom.Models
-@using LivreTom.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize]
-@rendermode InteractiveServer
 @inject MusicService MusicService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
-<PageTitle>My Orders - LivreTom</PageTitle>
+<PageTitle>Meus Pedidos - LivreTom</PageTitle>
 
-<div class="container py-4 animate-fade-in">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="animate-fade-in">
+    <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2 class="fw-black mb-0">My Orders</h2>
-            <p class="text-muted small">Track the status of your musical creations.</p>
+            <h2 class="fw-black mb-0">Meus Pedidos</h2>
+            <p class="text-muted small mb-0 d-none d-md-block">Acompanhe o status das suas produções musicais.</p>
         </div>
-        <a href="/" class="btn btn-dark rounded-pill px-4">New Music</a>
+        <a href="/" class="btn btn-dark rounded-pill px-3 small flex-shrink-0 ms-2">
+            <i class="bi bi-plus-lg me-1"></i> Nova Música
+        </a>
     </div>
 
-    @if (Orders == null)
+    @if (orders is not null && orders.Count > 0)
+    {
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+            <button class="btn @(activeFilter is null ? "btn-dark" : "btn-outline-dark") rounded-pill px-2 px-md-3 small"
+                    @onclick="() => activeFilter = null">
+                Todos <span class="badge bg-light text-dark ms-1">@orders.Count</span>
+            </button>
+            <button class="btn @(activeFilter == "Pendente" ? "btn-warning" : "btn-outline-warning") rounded-pill px-3"
+                    @onclick='() => activeFilter = "Pendente"'>
+                Em Produção <span class="badge bg-light text-dark ms-1">@orders.Count(o => o.Status == "Pendente")</span>
+            </button>
+            <button class="btn @(activeFilter == "Concluído" ? "btn-success" : "btn-outline-success") rounded-pill px-3"
+                    @onclick='() => activeFilter = "Concluído"'>
+                Concluídos <span class="badge bg-light text-dark ms-1">@orders.Count(o => o.Status == "Concluído")</span>
+            </button>
+        </div>
+    }
+
+    @if (orders is null)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2 text-muted">Loading history...</p>
+            <p class="mt-2 text-muted">Carregando histórico...</p>
         </div>
     }
-    else if (!Orders.Any())
+    else if (orders.Count == 0)
     {
         <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 24px;">
             <div class="mb-3 display-4">🎵</div>
-            <h5 class="fw-bold">No music here yet.</h5>
-            <p class="text-muted">Your compositions will appear here as soon as you make your first order.</p>
-            <a href="/" class="btn btn-vibrant text-white rounded-pill px-4 mt-2 shadow-sm">Start Creating</a>
+            <h5 class="fw-bold">Nenhuma música por aqui ainda.</h5>
+            <p class="text-muted">Suas composições aparecerão aqui assim que fizer seu primeiro pedido.</p>
+            <a href="/" class="btn btn-vibrant text-white rounded-pill px-4 mt-2 shadow-sm">Começar a Criar</a>
+        </div>
+    }
+    else if (filteredOrders.Count == 0)
+    {
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 24px;">
+            <div class="mb-3 display-4">🔍</div>
+            <h5 class="fw-bold">Nenhum pedido @(activeFilter == "Concluído" ? "concluído" : "em produção") encontrado.</h5>
         </div>
     }
     else
     {
-        <div class="table-responsive bg-white shadow-sm rounded-4 p-3">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr class="small text-uppercase text-muted">
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Description</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var order in Orders)
-                    {
-                        <tr>
-                            <td class="fw-medium">@order.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
-                            <td>
-                                <span class="badge @GetStatusClass(order.Status) rounded-pill px-3 py-2">
-                                    @order.Status
+        <div class="row g-4 align-items-start">
+            @foreach (var order in filteredOrders)
+            {
+                <div class="col-12 col-lg-6 col-xl-4">
+                    <div class="card border-0 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+
+                        @if (!string.IsNullOrEmpty(order.CoverImageUrl))
+                        {
+                            <img src="@order.CoverImageUrl" alt="Capa de @order.Title" class="card-img-top" style="height: 200px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center justify-content-center bg-dark text-white" style="height: 200px;">
+                                <i class="bi bi-music-note-beamed display-3 opacity-50"></i>
+                            </div>
+                        }
+
+                        <div class="card-body d-flex flex-column p-4">
+                            @* --- TÍTULO + STATUS --- *@
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="fw-bold mb-0 me-2" title="@order.Title">
+                                    @(order.Title ?? "Sem título")
+                                </h5>
+                                <span class="badge @GetStatusClass(order.Status) rounded-pill px-3 py-1 flex-shrink-0">
+                                    @GetStatusLabel(order.Status)
                                 </span>
-                            </td>
-                            <td class="text-truncate" style="max-width: 300px;">@order.FinalPrompt</td>
-                            <td class="text-end">
-                                <button class="btn btn-light btn-sm rounded-circle"><i class="bi bi-eye"></i></button>
-                                @if (order.Status == "Concluído")
-                                {
-                                    <button class="btn btn-vibrant text-white btn-sm rounded-circle ms-1"><i class="bi bi-play-fill"></i></button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                            </div>
+
+                            @* --- DATA + CRÉDITOS --- *@
+                            <div class="text-muted small mb-3">
+                                <i class="bi bi-calendar3 me-1"></i> @order.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                <span class="ms-3"><i class="bi bi-coin me-1"></i> @order.CreditsSpent token(s)</span>
+                            </div>
+
+                            @* --- PROMPT RESUMIDO --- *@
+                            @if (!string.IsNullOrEmpty(order.FinalPrompt))
+                            {
+                                <p class="text-muted small mb-3" title="@order.FinalPrompt">@order.FinalPrompt</p>
+                            }
+
+                            @* --- PLAYER DE ÁUDIO + DOWNLOAD --- *@
+                            @if (order.Status == "Concluído" && !string.IsNullOrEmpty(order.ResolvedAudioUrl))
+                            {
+                                <div class="mb-3">
+                                    <audio controls preload="none" class="w-100" style="border-radius: 12px;"
+                                           data-order-id="@order.Id">
+                                        <source src="@(order.DownloadConfirmed ? $"/api/audio/{order.Id}" : $"/api/audio/{order.Id}/preview?t={_sessionId}")" type="audio/mpeg" />
+                                    </audio>
+
+                                    @if (!order.DownloadConfirmed)
+                                    {
+                                        <div class="alert d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3 small"
+                                             style="background-color: #fffbeb; color: #b45309; border: none;">
+                                            <i class="bi bi-lock-fill"></i>
+                                            <span>Prévia de 30 segundos. <button class="btn btn-link p-0 small fw-bold" style="color: #b45309;" @onclick="() => OnDownloadClick(order)">Baixar para ouvir completo.</button></span>
+                                        </div>
+                                    }
+
+                                    <button class="btn btn-sm btn-outline-dark rounded-pill w-100 mt-2"
+                                            @onclick="() => OnDownloadClick(order)">
+                                        <i class="bi bi-download me-1"></i> Baixar MP3
+                                    </button>
+                                </div>
+                            }
+                            else if (order.Status == "Pendente")
+                            {
+                                <div class="alert alert-warning py-2 px-3 small mb-3 rounded-3 d-flex align-items-center" role="alert">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    Sua música está sendo produzida pela nossa equipe...
+                                </div>
+                            }
+
+                            @* --- LETRA (EXPANDÍVEL) --- *@
+                            @if (!string.IsNullOrEmpty(order.Lyrics))
+                            {
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill w-100"
+                                            @onclick="() => ToggleLyrics(order.Id)">
+                                        <i class="bi @(expandedLyrics.Contains(order.Id) ? "bi-chevron-up" : "bi-chevron-down") me-1"></i>
+                                        @(expandedLyrics.Contains(order.Id) ? "Ocultar Letra" : "Ver Letra")
+                                    </button>
+
+                                    @if (expandedLyrics.Contains(order.Id))
+                                    {
+                                        <div class="mt-2 p-3 bg-light rounded-3 small" style="max-height: 200px; overflow-y: auto; white-space: pre-line;">
+                                            @order.Lyrics
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* MODAL DE CONFIRMAÇÃO DE DOWNLOAD *@
+    @if (showDownloadModal && downloadTarget is not null)
+    {
+        <div class="modal-backdrop show"></div>
+        <div class="modal d-block" tabindex="-1" style="z-index: 1050;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmação de Download</h5>
+                        <button type="button" class="btn-close" @onclick="CloseDownloadModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small">
+                            <strong>Antes de baixar sua música, leia atentamente:</strong><br />
+                            Esta produção musical foi criada exclusivamente para você, com base nas informações e preferências fornecidas no momento do pedido, caracterizando-se como produto personalizado e sob demanda.
+                            De acordo com o Art. 49 do Código de Defesa do Consumidor (Lei 8.078/90), o direito de arrependimento de 7 dias aplica-se a compras realizadas fora do estabelecimento comercial. No entanto, o § único do Art. 49 estabelece que, no caso de serviços já iniciados ou produtos personalizados entregues, o direito de arrependimento pode ser afastado.
+                            Ao confirmar o download, você declara:
+                        </p>
+                        <ul class="small">
+                            <li>Que recebeu e teve acesso ao produto digital contratado</li>
+                            <li>Que compreende que, por ser uma produção personalizada, não é passível de reembolso após o download</li>
+                            <li>Que está de acordo com os Termos de Uso e Política de Entrega da LivreTom</li>
+                        </ul>
+
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="confirmDownloadCheck" @bind="acceptTermsChecked" />
+                            <label class="form-check-label" for="confirmDownloadCheck">
+                                Confirmo que li e aceito as condições acima
+                            </label>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(downloadModalError))
+                        {
+                            <div class="text-danger small mt-2">@downloadModalError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" @onclick="CloseDownloadModal">Voltar</button>
+                        <button class="btn btn-primary" @onclick="ConfirmAndDownload">Confirmar e Baixar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 </div>
 
 @code {
-    private List<MusicOrder>? Orders;
+    private List<MusicOrder>? orders;
+    private string? activeFilter;
+    private readonly string _sessionId = Guid.NewGuid().ToString("N")[..8];
+    private readonly HashSet<int> expandedLyrics = [];
+
+    private List<MusicOrder> filteredOrders =>
+        orders?.Where(o => activeFilter is null || o.Status == activeFilter).ToList() ?? [];
+
+    // Campos para modal de download
+    private MusicOrder? downloadTarget;
+    private bool showDownloadModal;
+    private bool acceptTermsChecked;
+    private string? downloadModalError;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
         if (!string.IsNullOrEmpty(userId))
-            Orders = await MusicService.GetOrdersByUserAsync(userId);
+            orders = await MusicService.GetOrdersByUserAsync(userId);
     }
 
-    private string GetStatusClass(string status) => status switch
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        "Processando" => "bg-warning text-dark",
+        if (orders is null) return;
+
+        foreach (var order in orders.Where(o => o.Status == "Concluído" && !o.DownloadConfirmed))
+        {
+            await JS.InvokeVoidAsync("initPreviewPlayer", order.Id, 30);
+        }
+    }
+
+    private async Task OnDownloadClick(MusicOrder order)
+    {
+        if (order.DownloadConfirmed)
+        {
+            await StartDownload(order);
+            return;
+        }
+
+        downloadTarget = order;
+        acceptTermsChecked = false;
+        downloadModalError = null;
+        showDownloadModal = true;
+    }
+
+    private void CloseDownloadModal()
+    {
+        showDownloadModal = false;
+        downloadTarget = null;
+        acceptTermsChecked = false;
+        downloadModalError = null;
+    }
+
+    private async Task ConfirmAndDownload()
+    {
+        if (downloadTarget is null) return;
+
+        if (!acceptTermsChecked)
+        {
+            downloadModalError = "Você precisa confirmar que leu e aceitou o termo.";
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            downloadModalError = "Usuário não autenticado.";
+            return;
+        }
+
+        var (success, message) = await MusicService.ConfirmDownloadAsync(downloadTarget.Id, userId);
+        if (!success)
+        {
+            downloadModalError = message;
+            return;
+        }
+
+        // Atualiza estado local e fecha modal
+        downloadTarget.DownloadConfirmed = true;
+        downloadTarget.DownloadConfirmedAt = DateTime.UtcNow;
+        showDownloadModal = false;
+
+        StateHasChanged();
+        await Task.Delay(100); // aguarda o Blazor re-renderizar com a nova URL
+        await JS.InvokeVoidAsync("removePreviewLimit", downloadTarget.Id, $"/api/audio/{downloadTarget.Id}");
+        await StartDownload(downloadTarget);
+    }
+
+    private async Task StartDownload(MusicOrder order)
+    {
+        var filename = $"{order.Title ?? "musica"}.mp3";
+        await JS.InvokeVoidAsync("downloadFile", $"/api/audio/{order.Id}", filename);
+    }
+
+    private void ToggleLyrics(int orderId)
+    {
+        if (!expandedLyrics.Remove(orderId))
+            expandedLyrics.Add(orderId);
+    }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "Pendente" => "Em Produção",
+        _ => status
+    };
+
+    private static string GetStatusClass(string status) => status switch
+    {
+        "Pendente" => "bg-warning text-dark",
         "Concluído" => "bg-success",
-        "Erro" => "bg-danger",
         _ => "bg-secondary"
     };
 }

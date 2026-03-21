@@ -1,12 +1,14 @@
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using LivreTom.Components;
+using LivreTom.Controllers;
 using LivreTom.Data;
 using LivreTom.Models;
 using LivreTom.Services;
-using LivreTom.Components;
-using Resend;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Resend;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,16 @@ builder.Services.AddAuthentication()
     {
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
+
+        // Sempre exibir o seletor de contas Google ao fazer login
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            var uri = context.RedirectUri;
+            if (!uri.Contains("prompt="))
+                uri += "&prompt=select_account";
+            context.Response.Redirect(uri);
+            return Task.CompletedTask;
+        };
     });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
@@ -65,6 +77,7 @@ builder.Services.AddAntiforgery();
 
 // Infraestrutura
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<AudioController>();
 builder.Services.AddScoped<AuthenticationStateService>();
 
 // Serviços de negócio
@@ -75,7 +88,39 @@ builder.Services.AddSingleton<IResend>(_ =>
     ResendClient.Create(builder.Configuration["Resend:ApiKey"]!));
 builder.Services.AddScoped<EmailService>();
 
+// Stripe
+StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
 var app = builder.Build();
+
+// Seed da role Admin
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    if (!await roleManager.RoleExistsAsync("Admin"))
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+
+    var adminEmails = app.Configuration.GetSection("Admin:Emails")
+        .Get<string[]>() ?? [];
+
+    // Adiciona role para emails configurados
+    foreach (var email in adminEmails)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is not null && !await userManager.IsInRoleAsync(user, "Admin"))
+            await userManager.AddToRoleAsync(user, "Admin");
+    }
+
+    // Remove role de quem não está mais na lista
+    var currentAdmins = await userManager.GetUsersInRoleAsync("Admin");
+    foreach (var admin in currentAdmins)
+    {
+        if (!adminEmails.Contains(admin.Email!, StringComparer.OrdinalIgnoreCase))
+            await userManager.RemoveFromRoleAsync(admin, "Admin");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
