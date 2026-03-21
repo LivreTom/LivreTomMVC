@@ -1,0 +1,290 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Meu Perfil - LivreTom</PageTitle>
+
+<div class="animate-fade-in" style="max-width: 720px;">
+    <div class="mb-4">
+        <h2 class="fw-black mb-0">Meu Perfil</h2>
+        <p class="text-muted small mb-0">Gerencie suas informações pessoais e segurança.</p>
+    </div>
+
+    @if (user is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando perfil...</p>
+        </div>
+    }
+    else
+    {
+        @* ========== INFO DA CONTA ========== *@
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-4"
+                         style="width: 64px; height: 64px; background: linear-gradient(135deg, #6c9df0 0%, #a25df5 100%);">
+                        @user.Email?.Substring(0, 2).ToUpper()
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">@user.Email?.Split('@')[0]</h5>
+                        <small class="text-muted">@user.Email</small>
+                    </div>
+                </div>
+
+                @* ========== BANNER DE TOKENS ========== *@
+                <div class="token-banner d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle"
+                             style="width: 36px; height: 36px; background: transparent;">
+                            <i class="bi bi-coin fs-4" style="color: #f0c040;"></i>
+                        </div>
+                        <div>
+                            <small class="d-block text-muted">Tokens de Música</small>
+                            <span class="token-count">@user.Credits</span>
+                        </div>
+                    </div>
+                    <button class="btn-acquire rounded-pill fw-bold px-4"
+                            @onclick="() => OpenTokenModal?.Invoke()">
+                        <i class="bi bi-plus-circle me-1"></i> Adquirir tokens
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @* ========== ALTERAR / CRIAR SENHA (COLAPSÁVEL) ========== *@
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+            <div class="card-body p-4">
+                @if (!showPasswordSection)
+                {
+                    <button class="btn btn-outline-dark rounded-pill px-4 w-100 d-flex align-items-center justify-content-center gap-2"
+                            @onclick="() => showPasswordSection = true">
+                        <i class="bi bi-shield-lock"></i>
+                        @(hasPassword ? "Alterar Senha" : "Criar Senha")
+                    </button>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-shield-lock me-2"></i>
+                            @(hasPassword ? "Alterar Senha" : "Criar Senha")
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                @onclick="ClosePasswordSection" disabled="@isSaving">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-muted small mb-3">
+                        @(hasPassword
+                            ? "Altere sua senha atual para manter a conta segura."
+                            : "Você entrou com Google. Crie uma senha para também acessar por e-mail.")
+                    </p>
+
+                    @if (!string.IsNullOrEmpty(passwordMessage))
+                    {
+                        <div class="alert @(passwordSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show rounded-3 small" role="alert">
+                            <i class="bi @(passwordSuccess ? "bi-check-circle" : "bi-exclamation-circle") me-1"></i>
+                            @passwordMessage
+                            <button type="button" class="btn-close btn-close-sm" @onclick="() => passwordMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (hasPassword)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Senha atual</label>
+                            <input type="password" class="form-control rounded-3" @bind="currentPassword" disabled="@isSaving" />
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nova senha</label>
+                        <input type="password" class="form-control rounded-3" @bind="newPassword" disabled="@isSaving" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Confirmar nova senha</label>
+                        <input type="password" class="form-control rounded-3" @bind="confirmPassword" disabled="@isSaving" />
+                    </div>
+                    <button class="btn btn-dark rounded-pill px-4"
+                            @onclick="HandlePasswordChange"
+                            disabled="@(isSaving || string.IsNullOrWhiteSpace(newPassword))">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        @(hasPassword ? "Alterar Senha" : "Criar Senha")
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* ========== ZONA DE PERIGO ========== *@
+        <div class="card border-0 shadow-sm" style="border-radius: 20px; border: 1px solid #dc3545 !important;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-1 text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i> Zona de Perigo
+                </h6>
+                <p class="text-muted small mb-3">
+                    A exclusão da conta é permanente. Todos os seus pedidos e dados serão removidos.
+                </p>
+
+                @if (!showDeleteConfirm)
+                {
+                    <button class="btn btn-outline-danger rounded-pill px-4" @onclick="() => showDeleteConfirm = true">
+                        <i class="bi bi-trash me-1"></i> Excluir Minha Conta
+                    </button>
+                }
+                else
+                {
+                    <div class="alert alert-danger rounded-3 small">
+                        <strong>Tem certeza?</strong> Digite <code>EXCLUIR</code> para confirmar.
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="text" class="form-control rounded-3" style="max-width: 200px;"
+                               placeholder="EXCLUIR" @bind="deleteConfirmText" disabled="@isDeleting" />
+                        <button class="btn btn-danger rounded-pill px-4"
+                                @onclick="HandleDeleteAccount"
+                                disabled="@(isDeleting || deleteConfirmText != "EXCLUIR")">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            }
+                            Confirmar Exclusão
+                        </button>
+                        <button class="btn btn-outline-secondary rounded-pill px-3"
+                                @onclick="() => { showDeleteConfirm = false; deleteConfirmText = string.Empty; }"
+                                disabled="@isDeleting">
+                            Cancelar
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? user;
+    private bool hasPassword;
+    private bool hasExternalLogin;
+
+    // Cascading callback do Layout para abrir o modal de tokens
+    [CascadingParameter(Name = "OpenTokenModal")]
+    private Action? OpenTokenModal { get; set; }
+
+    // Senha
+    private bool showPasswordSection;
+    private string currentPassword = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private string? passwordMessage;
+    private bool passwordSuccess;
+    private bool isSaving;
+
+    // Exclusão
+    private bool showDeleteConfirm;
+    private string deleteConfirmText = "";
+    private bool isDeleting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            user = await UserManager.FindByIdAsync(userId);
+            if (user is not null)
+            {
+                hasPassword = user.PasswordHash is not null;
+                var logins = await UserManager.GetLoginsAsync(user);
+                hasExternalLogin = logins.Any(l => l.LoginProvider == "Google");
+            }
+        }
+    }
+
+    private void ClosePasswordSection()
+    {
+        showPasswordSection = false;
+        currentPassword = "";
+        newPassword = "";
+        confirmPassword = "";
+        passwordMessage = null;
+    }
+
+    private async Task HandlePasswordChange()
+    {
+        if (user is null) return;
+
+        if (newPassword != confirmPassword)
+        {
+            passwordMessage = "As senhas não coincidem.";
+            passwordSuccess = false;
+            return;
+        }
+
+        isSaving = true;
+        passwordMessage = null;
+
+        IdentityResult result;
+
+        if (hasPassword)
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword))
+            {
+                passwordMessage = "Informe a senha atual.";
+                passwordSuccess = false;
+                isSaving = false;
+                return;
+            }
+            result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        }
+        else
+        {
+            result = await UserManager.AddPasswordAsync(user, newPassword);
+        }
+
+        if (result.Succeeded)
+        {
+            passwordMessage = hasPassword ? "Senha alterada com sucesso!" : "Senha criada com sucesso! Agora você pode entrar por e-mail.";
+            passwordSuccess = true;
+            hasPassword = true;
+            currentPassword = "";
+            newPassword = "";
+            confirmPassword = "";
+        }
+        else
+        {
+            passwordMessage = result.Errors.FirstOrDefault()?.Description ?? "Erro ao processar senha.";
+            passwordSuccess = false;
+        }
+
+        isSaving = false;
+    }
+
+    private async Task HandleDeleteAccount()
+    {
+        if (user is null || deleteConfirmText != "EXCLUIR") return;
+
+        isDeleting = true;
+
+        var result = await UserManager.DeleteAsync(user);
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo("Account/logout", forceLoad: true);
+        }
+        else
+        {
+            passwordMessage = "Erro ao excluir conta. Tente novamente.";
+            passwordSuccess = false;
+            isDeleting = false;
+        }
+    }
+}

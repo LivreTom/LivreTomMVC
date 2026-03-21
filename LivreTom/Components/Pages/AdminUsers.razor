@@ -1,0 +1,159 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Usuários - Admin LivreTom</PageTitle>
+
+<div class="animate-fade-in">
+    <div class="mb-4">
+        <h2 class="fw-black mb-0">Usuários</h2>
+        <p class="text-muted small mb-0">Usuários cadastrados na plataforma.</p>
+    </div>
+
+    @if (users is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando usuários...</p>
+        </div>
+    }
+    else
+    {
+        @* TABELA — só desktop *@
+
+        <div class="d-none d-md-block table-responsive bg-white shadow-sm rounded-4 p-3">
+
+            <table class="table table-hover align-middle mb-0">
+
+                <thead class="table-light">
+
+                    <tr class="small text-uppercase text-muted">
+
+                        <th>E-mail</th>
+
+                        <th>Tokens</th>
+
+                        <th>E-mail confirmado</th>
+
+                        <th>Provedor</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @foreach (var user in users)
+
+                    {
+
+                        <tr>
+
+                            <td class="fw-medium">@user.Email</td>
+
+                            <td>
+
+                                <span class="badge bg-primary rounded-pill px-3 py-1">@user.Credits</span>
+
+                            </td>
+
+                            <td>
+
+                                @if (user.EmailConfirmed)
+
+                                {
+
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+
+                                }
+
+                                else
+
+                                {
+
+                                    <i class="bi bi-x-circle text-muted"></i>
+
+                                }
+
+                            </td>
+
+                            <td class="small text-muted">
+
+                                @(user.PasswordHash is null ? "Google" : "E-mail/Senha")
+
+                            </td>
+
+                        </tr>
+
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        @* CARDS — só mobile *@
+
+        <div class="d-md-none d-flex flex-column gap-3">
+
+            @foreach (var user in users)
+
+            {
+
+                <div class="card border-0 shadow-sm p-3" style="border-radius: 16px;">
+
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+
+                        <span class="fw-medium small">@user.Email</span>
+
+                        <span class="badge bg-primary rounded-pill px-2">@user.Credits tokens</span>
+
+                    </div>
+
+                    <div class="d-flex gap-3 small text-muted">
+
+                        <span>
+
+                            @if (user.EmailConfirmed)
+
+                            {
+
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+
+                                <span>E-mail confirmado</span>
+
+                            }
+
+                            else
+                            {
+                                <i class="bi bi-x-circle text-muted me-1"></i>
+                                <span>Não confirmado</span>
+                            }
+                        </span>
+                        <span>
+                            <i class="bi @(user.PasswordHash is null ? "bi-google" : "bi-envelope") me-1"></i>
+                            @(user.PasswordHash is null ? "Google" : "E-mail/Senha")
+                        </span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <p class="text-muted small mt-3">
+            <i class="bi bi-info-circle me-1"></i> Total: @users.Count usuário(s)
+        </p>
+    }
+</div>
+
+@code {
+    private List<ApplicationUser>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await Task.Run(() => UserManager.Users.OrderBy(u => u.Email).ToList());
+    }
+}

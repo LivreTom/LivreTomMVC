@@ -16,6 +16,190 @@ html {
     width: 100%;
 }
 
+@media (max-width: 768px) {
+    #services {
+        padding-top: 40px !important;
+    }
+
+        #services .feature-card {
+            padding: 20px !important;
+        }
+
+    .icon-circle {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #samples {
+        padding-top: 60px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .auth-buttons .btn {
+        white-space: nowrap;
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .auth-buttons a {
+        font-size: 0.75rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .top-nav {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+        .top-nav .nav-links {
+            display: none !important;
+        }
+}
+
+@media (max-width: 768px) {
+    /* Seções não ficam mais presas em vh-100 no mobile */
+    .section-container.vh-100 {
+        height: auto !important;
+        min-height: 100vh;
+        padding-bottom: 60px;
+    }
+
+    /* Scroll down btn não sobrepõe mais */
+    .scroll-down-btn {
+        position: relative !important;
+        bottom: auto !important;
+        margin-top: 24px;
+    }
+
+    /* Hero com padding para a nav */
+    .section-container.vh-100:first-of-type {
+        padding-top: 100px;
+    }
+
+    /* Samples: remove altura fixa */
+    #samples.vh-100 {
+        height: auto !important;
+    }
+
+    /* Serviços: remove h-100 dos cards */
+    #services .feature-card {
+        height: auto !important;
+    }
+
+    /* Nav superior */
+    .top-nav {
+        padding: 16px !important;
+    }
+
+    .nav-links {
+        display: none !important;
+    }
+
+    /* Tipografia */
+    .main-title {
+        font-size: clamp(2rem, 8vw, 4.5rem);
+        letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+        padding: 0 8px;
+    }
+
+    .subtitle-large {
+        font-size: clamp(1rem, 4vw, 1.8rem);
+        padding: 0 8px;
+    }
+
+    .final-cta h3 {
+        font-size: 1.5rem;
+    }
+
+    /* Steps em coluna */
+    .step-circles {
+        flex-direction: column;
+        align-items: center;
+    }
+
+        .step-circles .step {
+            width: 90%;
+            text-align: center;
+        }
+
+    /* Marquee menor */
+    .marquee-content {
+        gap: 2rem;
+        font-size: 0.85rem;
+    }
+
+    /* Botão hero */
+    .btn-glow {
+        font-size: 0.85rem;
+        padding: 12px 24px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .section-container.vh-100:first-of-type {
+        padding-top: 80px;
+    }
+
+    .top-nav {
+        padding: 16px !important;
+    }
+
+    .nav-links {
+        display: none !important;
+    }
+
+    .btn-glow {
+        font-size: 0.85rem;
+        padding: 12px 24px !important;
+    }
+
+    .step-circles {
+        flex-direction: column;
+        align-items: center;
+    }
+
+        .step-circles .step {
+            width: 100%;
+            text-align: center;
+        }
+
+    .audio-card {
+        margin-bottom: 0;
+    }
+
+    .marquee-content {
+        gap: 2rem;
+        font-size: 0.85rem;
+    }
+
+    .main-title {
+        font-size: clamp(2rem, 8vw, 4.5rem);
+        letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+        padding: 0 16px;
+    }
+
+    .subtitle-large {
+        font-size: clamp(1rem, 4vw, 1.8rem);
+        padding: 0 16px;
+    }
+
+    .final-cta h3 {
+        font-size: 1.5rem;
+    }
+}
+
 .fw-black {
     font-weight: 900;
 }
@@ -25,6 +209,14 @@ html {
     top: 0;
     left: 0;
     background: transparent;
+}
+
+/* ========== SIDEBAR LOGO ========== */
+.home-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    transition: width 0.3s ease, height 0.3s ease;
 }
 
 .logo .text-primary {
@@ -52,7 +244,7 @@ html {
 
 /* --- TELA 1 (HERO) --- */
 .main-title {
-    font-size: clamp(3rem, 6vw, 4.5rem);
+    font-size: clamp(2rem, 8vw, 4.5rem);
     font-weight: 900;
     letter-spacing: -1.5px;
     line-height: 1.1;
@@ -131,7 +323,7 @@ html {
 
 /* --- TELA 3 (MANIFESTO) --- */
 .subtitle-large {
-    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    font-size: clamp(1rem, 4vw, 1.8rem);
     max-width: 850px;
     line-height: 1.4;
 }
@@ -178,6 +370,29 @@ html {
 .cursor-pointer {
     cursor: pointer;
 }
+
+/* --- BOTÃO VIBRANT (ADMIN) --- */
+.btn-vibrant {
+    background: linear-gradient(135deg, #6c9df0 0%, #a25df5 100%);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(162, 93, 245, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .btn-vibrant:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(162, 93, 245, 0.4);
+        color: #fff;
+    }
+
+    .btn-vibrant:disabled {
+        opacity: 0.6;
+        transform: none;
+        box-shadow: none;
+    }
 
 /* --- COMPONENTES DO WIZARD (MODAL E INPUTS) --- */
 .animate-fade-in {

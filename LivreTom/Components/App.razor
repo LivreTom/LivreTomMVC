@@ -12,13 +12,61 @@
     <link rel="stylesheet" href="@Assets["LivreTom.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script src="@Assets["lib/bootstrap/dist/js/bootstrap.bundle.min.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        window.downloadFile = async function (url, filename) {
+            try {
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            } catch {
+                window.open(url, '_blank');
+            }
+        };
+        function initPreviewPlayer(audioId, maxSeconds) {
+            setTimeout(() => {
+                const audio = document.querySelector(`audio[data-order-id="${audioId}"]`);
+                if (!audio) return;
+                if (audio.dataset.previewInitialized) return;
+                audio.dataset.previewInitialized = 'true';
+                audio.addEventListener('timeupdate', function() {
+                if (audio.currentTime >= maxSeconds) {
+                audio.pause();
+                audio.currentTime = 0;
+                }
+                });
+            }, 1000);
+        }
+        function removePreviewLimit(audioId, newSrc) {
+            setTimeout(() => {
+            const audio = document.querySelector(`audio[data-order-id="${audioId}"]`);
+            if (!audio) return;
+                const clone = audio.cloneNode(false);
+                clone.src = newSrc;
+                clone.setAttribute('data-order-id', audioId);
+                clone.controls = true;
+                clone.preload = 'none';
+                clone.className = audio.className;
+                clone.style.cssText = audio.style.cssText;
+        
+                audio.parentNode.replaceChild(clone, audio);
+                clone.load();
+            }, 200);
+        }
+    </script>
 </body>
 
 </html>
