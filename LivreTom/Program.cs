@@ -87,6 +87,7 @@ builder.Services.AddScoped<MusicService>();
 builder.Services.AddSingleton<IResend>(_ =>
     ResendClient.Create(builder.Configuration["Resend:ApiKey"]!));
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<TicketService>();
 
 // Stripe
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];

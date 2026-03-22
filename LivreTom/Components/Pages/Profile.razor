@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthStateProvider
@@ -50,11 +51,88 @@
                             <span class="token-count">@user.Credits</span>
                         </div>
                     </div>
-                    <button class="btn-acquire rounded-pill fw-bold px-4"
-                            @onclick="() => OpenTokenModal?.Invoke()">
-                        <i class="bi bi-plus-circle me-1"></i> Adquirir tokens
-                    </button>
+                    <AuthorizeView Roles="Admin">
+                        <NotAuthorized>
+                            <button class="btn-acquire rounded-pill fw-bold px-4"
+                                    @onclick="() => OpenTokenModal?.Invoke()">
+                                <i class="bi bi-plus-circle me-1"></i> Adquirir tokens
+                            </button>
+                        </NotAuthorized>
+                    </AuthorizeView>
                 </div>
+            </div>
+        </div>
+
+        @* ========== USERNAME ========== *@
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+            <div class="card-body p-4">
+                @if (!showUsernameSection)
+                {
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <small class="text-muted d-block">Nome de usuário</small>
+                            <span class="fw-bold">@(string.IsNullOrEmpty(user.DisplayName) ? "Não definido" : "@" + user.DisplayName)</span>
+                            @if (!user.CanChangeDisplayName)
+                            {
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Próxima alteração disponível em @user.DisplayNameLastChangedAt!.Value.AddDays(30).ToString("dd/MM/yyyy")
+                                </small>
+                            }
+                        </div>
+                        <button class="btn btn-outline-dark rounded-pill px-4"
+                                @onclick="() => showUsernameSection = true"
+                                disabled="@(!user.CanChangeDisplayName)">
+                            <i class="bi bi-pencil me-1"></i>
+                            @(string.IsNullOrEmpty(user.DisplayName) ? "Definir" : "Alterar")
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-at me-2"></i> Nome de usuário
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                @onclick="CloseUsernameSection" disabled="@isSavingUsername">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-muted small mb-3">
+                        Escolha um nome único. Você só poderá alterar novamente após 30 dias.
+                    </p>
+
+                    @if (!string.IsNullOrEmpty(usernameMessage))
+                    {
+                        <div class="alert @(usernameSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show rounded-3 small" role="alert">
+                            <i class="bi @(usernameSuccess ? "bi-check-circle" : "bi-exclamation-circle") me-1"></i>
+                            @usernameMessage
+                            <button type="button" class="btn-close btn-close-sm" @onclick="() => usernameMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text rounded-start-3">@@</span>
+                        <input type="text" class="form-control rounded-end-3"
+                               placeholder="seuusername"
+                               @bind="newUsername"
+                               disabled="@isSavingUsername"
+                               maxlength="30" />
+                    </div>
+                    <small class="text-muted d-block mb-3">Apenas letras, números e underscores. Mínimo 3 caracteres.</small>
+
+                    <button class="btn btn-dark rounded-pill px-4"
+                            @onclick="HandleUsernameChange"
+                            disabled="@(isSavingUsername || string.IsNullOrWhiteSpace(newUsername))">
+                        @if (isSavingUsername)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Salvar Username
+                    </button>
+                }
             </div>
         </div>
 
@@ -126,47 +204,54 @@
         </div>
 
         @* ========== ZONA DE PERIGO ========== *@
-        <div class="card border-0 shadow-sm" style="border-radius: 20px; border: 1px solid #dc3545 !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1 text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i> Zona de Perigo
-                </h6>
-                <p class="text-muted small mb-3">
-                    A exclusão da conta é permanente. Todos os seus pedidos e dados serão removidos.
-                </p>
+        <AuthorizeView Roles="Admin">
+            <NotAuthorized>
+                @if (!user.ScheduledDeletionAt.HasValue)
+                {
+                <div class="card border-0 shadow-sm" style="border-radius: 20px; border: 1px solid #dc3545 !important;">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-1 text-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i> Zona de Perigo
+                        </h6>
+                        <p class="text-muted small mb-3">
+                            Ao solicitar a exclusão, sua conta será removida após 30 dias. Você receberá um e-mail com as instruções e poderá cancelar entrando em contato com o suporte.
+                        </p>
 
-                @if (!showDeleteConfirm)
-                {
-                    <button class="btn btn-outline-danger rounded-pill px-4" @onclick="() => showDeleteConfirm = true">
-                        <i class="bi bi-trash me-1"></i> Excluir Minha Conta
-                    </button>
-                }
-                else
-                {
-                    <div class="alert alert-danger rounded-3 small">
-                        <strong>Tem certeza?</strong> Digite <code>EXCLUIR</code> para confirmar.
+                        @if (!showDeleteConfirm)
+                        {
+                            <button class="btn btn-outline-danger rounded-pill px-4" @onclick="() => showDeleteConfirm = true">
+                                <i class="bi bi-trash me-1"></i> Excluir Minha Conta
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger rounded-3 small">
+                                <strong>Tem certeza?</strong> Digite <code>EXCLUIR</code> para confirmar.
+                            </div>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                    <input type="text" class="form-control rounded-3" style="max-width: 200px;"
+                                           placeholder="EXCLUIR" @bind="deleteConfirmText" @bind:event="oninput" disabled="@isDeleting" />
+                                <button class="btn btn-danger rounded-pill px-4"
+                                        @onclick="HandleDeleteAccount"
+                                        disabled="@(isDeleting || deleteConfirmText != "EXCLUIR")">
+                                    @if (isDeleting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    }
+                                    Confirmar Exclusão
+                                </button>
+                                <button class="btn btn-outline-secondary rounded-pill px-3"
+                                        @onclick="() => { showDeleteConfirm = false; deleteConfirmText = string.Empty; }"
+                                        disabled="@isDeleting">
+                                    Cancelar
+                                </button>
+                            </div>
+                        }
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <input type="text" class="form-control rounded-3" style="max-width: 200px;"
-                               placeholder="EXCLUIR" @bind="deleteConfirmText" disabled="@isDeleting" />
-                        <button class="btn btn-danger rounded-pill px-4"
-                                @onclick="HandleDeleteAccount"
-                                disabled="@(isDeleting || deleteConfirmText != "EXCLUIR")">
-                            @if (isDeleting)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                            }
-                            Confirmar Exclusão
-                        </button>
-                        <button class="btn btn-outline-secondary rounded-pill px-3"
-                                @onclick="() => { showDeleteConfirm = false; deleteConfirmText = string.Empty; }"
-                                disabled="@isDeleting">
-                            Cancelar
-                        </button>
                     </div>
                 }
-            </div>
-        </div>
+            </NotAuthorized>
+        </AuthorizeView>
     }
 </div>
 
@@ -175,9 +260,11 @@
     private bool hasPassword;
     private bool hasExternalLogin;
 
-    // Cascading callback do Layout para abrir o modal de tokens
     [CascadingParameter(Name = "OpenTokenModal")]
     private Action? OpenTokenModal { get; set; }
+
+    [CascadingParameter(Name = "RefreshLayout")]
+    private Action? RefreshLayout { get; set; }
 
     // Senha
     private bool showPasswordSection;
@@ -192,6 +279,13 @@
     private bool showDeleteConfirm;
     private string deleteConfirmText = "";
     private bool isDeleting;
+
+    // Username
+    private bool showUsernameSection;
+    private string newUsername = "";
+    private string? usernameMessage;
+    private bool usernameSuccess;
+    private bool isSavingUsername;
 
     protected override async Task OnInitializedAsync()
     {
@@ -208,6 +302,67 @@
                 hasExternalLogin = logins.Any(l => l.LoginProvider == "Google");
             }
         }
+    }
+
+    private void CloseUsernameSection()
+    {
+        showUsernameSection = false;
+        newUsername = "";
+        usernameMessage = null;
+    }
+
+    private async Task HandleUsernameChange()
+    {
+        if (user is null) return;
+
+        var trimmed = newUsername.Trim().ToLower();
+
+        if (trimmed.Length < 3)
+        {
+            usernameMessage = "O username deve ter no mínimo 3 caracteres.";
+            usernameSuccess = false;
+            return;
+        }
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^[a-z0-9_]+$"))
+        {
+            usernameMessage = "Use apenas letras, números e underscores.";
+            usernameSuccess = false;
+            return;
+        }
+
+        var existingUser = await UserManager.Users
+            .FirstOrDefaultAsync(u => u.DisplayName == trimmed && u.Id != user.Id);
+
+        if (existingUser is not null)
+        {
+            usernameMessage = "Este username já está em uso.";
+            usernameSuccess = false;
+            return;
+        }
+
+        isSavingUsername = true;
+        usernameMessage = null;
+
+        user.DisplayName = trimmed;
+        user.DisplayNameLastChangedAt = DateTime.UtcNow;
+
+        var result = await UserManager.UpdateAsync(user);
+
+        if (result.Succeeded)
+        {
+            usernameMessage = "Username atualizado com sucesso!";
+            usernameSuccess = true;
+            showUsernameSection = false;
+            newUsername = "";
+        }
+        else
+        {
+            usernameMessage = result.Errors.FirstOrDefault()?.Description ?? "Erro ao atualizar username.";
+            usernameSuccess = false;
+        }
+
+        isSavingUsername = false;
     }
 
     private void ClosePasswordSection()
@@ -275,14 +430,19 @@
 
         isDeleting = true;
 
-        var result = await UserManager.DeleteAsync(user);
+        user.ScheduledDeletionAt = DateTime.UtcNow.AddDays(30);
+        var result = await UserManager.UpdateAsync(user);
+
         if (result.Succeeded)
         {
-            Navigation.NavigateTo("Account/logout", forceLoad: true);
+            showDeleteConfirm = false;
+            deleteConfirmText = "";
+            isDeleting = false;
+            RefreshLayout?.Invoke();
         }
         else
         {
-            passwordMessage = "Erro ao excluir conta. Tente novamente.";
+            passwordMessage = "Erro ao processar solicitação. Tente novamente.";
             passwordSuccess = false;
             isDeleting = false;
         }

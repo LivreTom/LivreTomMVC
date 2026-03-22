@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Identity
+@using LivreTom.Models
 @inject IServiceScopeFactory ScopeFactory
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
@@ -38,6 +40,12 @@
                                             <span class="sidebar-text">Usuários</span>
                                         </NavLink>
                                     </li>
+                                    <li class="mb-3">
+                                        <NavLink href="admin/tickets" class="nav-link text-white opacity-75" title="Tickets">
+                                            <i class="bi bi-ticket me-2"></i>
+                                            <span class="sidebar-text">Tickets</span>
+                                        </NavLink>
+                                    </li>
                                 </Authorized>
                                 <NotAuthorized Context="userCtx">
                                     <li class="mb-3">
@@ -50,6 +58,12 @@
                                         <NavLink href="my-orders" class="nav-link text-white opacity-75" title="Meus Pedidos">
                                             <i class="bi bi-music-note-list me-2"></i>
                                             <span class="sidebar-text">Meus Pedidos</span>
+                                        </NavLink>
+                                    </li>
+                                    <li class="mb-3">
+                                        <NavLink href="support" class="nav-link text-white opacity-75" title="Suporte">
+                                            <i class="bi bi-headset me-2"></i>
+                                            <span class="sidebar-text">Suporte</span>
                                         </NavLink>
                                     </li>
                                 </NotAuthorized>
@@ -85,7 +99,7 @@
                             <button class="sidebar-toggle-btn" @onclick="ToggleSidebar" title="Menu">
                                 <i class="bi bi-list fs-4"></i>
                             </button>
-                            <h5 class="mb-0 fw-bold d-none d-sm-block">Bem-vindo, @context.User.Identity?.Name?.Split('@')[0]!</h5>
+                            <h5 class="mb-0 fw-bold d-none d-sm-block">Bem-vindo, @(string.IsNullOrEmpty(displayName) ? context.User.Identity?.Name?.Split('@')[0] : displayName)!</h5>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <AuthorizeView Roles="Admin" Context="badgeAuth">
@@ -101,7 +115,14 @@
                                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 py-2" style="border-radius: 16px; min-width: 240px;">
                                     <li class="px-3 py-2">
                                         <small class="text-muted d-block">Conectado como</small>
-                                        <strong class="small text-truncate d-block" style="max-width: 200px;">@context.User.Identity?.Name</strong>
+                                        @if (!string.IsNullOrEmpty(displayName))
+                                        {
+                                            <strong class="small d-block">@("@" + displayName)</strong>
+                                        }
+                                        else
+                                        {
+                                            <strong class="small text-truncate d-block" style="max-width: 200px;">@context.User.Identity?.Name</strong>
+                                        }
                                     </li>
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li>
@@ -128,9 +149,26 @@
                             </div>
                         </div>
                     </header>
+                    @if (scheduledDeletion.HasValue)
+                    {
+                        <div class="alert alert-danger rounded-0 mb-0 d-flex align-items-center justify-content-between flex-wrap gap-2 px-4 py-3" style="border-radius: 0 !important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                <span class="small">
+                                    <strong>Sua conta será excluída permanentemente em @scheduledDeletion.Value.ToString("dd/MM/yyyy").</strong>
+                                    Caso tenha se arrependido, abra um ticket de suporte solicitando o cancelamento.
+                                </span>
+                            </div>
+                            <a href="support" class="btn btn-sm btn-light rounded-pill px-3 flex-shrink-0">
+                                <i class="bi bi-headset me-1"></i> Abrir Ticket
+                            </a>
+                        </div>
+                    }
                     <div class="p-4">
                         <CascadingValue Value="(Action)OpenTokenModal" Name="OpenTokenModal">
-                            @Body
+                            <CascadingValue Value="(Action)RefreshLayout" Name="RefreshLayout">
+                                @Body
+                            </CascadingValue>
                         </CascadingValue>
                     </div>
                 </main>
@@ -272,6 +310,8 @@
 
 @code {
     private int userCredits;
+    private string? displayName;
+    private DateTime? scheduledDeletion;
 
     // Sidebar
     private bool sidebarCollapsed;
@@ -306,7 +346,25 @@
         new(10,  "229,90", "22,99", 23, "⭐ Popular",       true,  false),
         new(20,  "429,90", "21,50", 28, null,               false, false),
         new(30,  "599,90", "20,00", 33, "🔥 Melhor Custo",  false, true),
+        new(1, "2,00",   "2,00",  0,  "🧪 TESTE",         false, false), // REMOVER ANTES DO LANÇAMENTO
     ];
+
+    private async void RefreshLayout()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var appUser = await userManager.FindByIdAsync(userId);
+            scheduledDeletion = appUser?.ScheduledDeletionAt;
+            displayName = appUser?.DisplayName;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -318,11 +376,15 @@
         if (!string.IsNullOrEmpty(userId))
         {
             using var scope = ScopeFactory.CreateScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var appUser = await userManager.FindByIdAsync(userId);
+            displayName = appUser?.DisplayName;
+            scheduledDeletion = appUser?.ScheduledDeletionAt;
+
             var creditService = scope.ServiceProvider.GetRequiredService<CreditService>();
             userCredits = await creditService.GetUserCreditsAsync(userId);
         }
 
-        // Detectar retorno do Stripe (?payment=success ou ?payment=cancelled)
         var uri = new Uri(Navigation.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         paymentStatus = query["payment"];
@@ -375,6 +437,7 @@
     private void OpenTokenModal()
     {
         showTokenModal = true;
+        mobileSidebarOpen = false;
         StateHasChanged();
     }
 

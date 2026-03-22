@@ -1,0 +1,220 @@
+﻿@page "/support"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using LivreTom.Models
+@using LivreTom.Services
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject TicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Suporte - LivreTom</PageTitle>
+
+<div class="animate-fade-in">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="fw-black mb-0">Suporte</h2>
+            <p class="text-muted small mb-0 d-none d-md-block">Abra um ticket e nossa equipe entrará em contato.</p>
+        </div>
+        <button class="btn btn-dark rounded-pill px-3 small flex-shrink-0 ms-2"
+                @onclick="() => showCreateModal = true">
+            <i class="bi bi-plus-lg me-1"></i> Novo Ticket
+        </button>
+    </div>
+
+    @if (tickets is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando tickets...</p>
+        </div>
+    }
+    else if (tickets.Count == 0)
+    {
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 24px;">
+            <div class="mb-3 display-4">🎧</div>
+            <h5 class="fw-bold">Nenhum ticket por aqui.</h5>
+            <p class="text-muted">Abra um ticket e nossa equipe entrará em contato em breve.</p>
+            <button class="btn btn-dark rounded-pill px-4 mt-2" @onclick="() => showCreateModal = true">
+                Abrir Ticket
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var ticket in tickets)
+            {
+                <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="fw-bold">#@ticket.Id — @ticket.Subject</span>
+                            <div class="text-muted small mt-1">
+                                <i class="bi bi-calendar3 me-1"></i> @ticket.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                        <span class="badge @GetStatusClass(ticket.Status) rounded-pill px-3 py-1 flex-shrink-0 ms-2">
+                            @ticket.Status
+                        </span>
+                    </div>
+                    <p class="small text-muted mb-3">@ticket.Description</p>
+
+                    @if (ticket.Status == TicketStatus.Cancelado && !string.IsNullOrEmpty(ticket.CancelReason))
+                    {
+                        <div class="alert alert-secondary small rounded-3 mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Motivo do cancelamento:</strong> @ticket.CancelReason
+                        </div>
+                    }
+
+                    @if (ticket.Status == TicketStatus.Aberto)
+                    {
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                    @onclick="() => UpdateStatus(ticket, TicketStatus.Cancelado)">
+                                <i class="bi bi-x-lg me-1"></i> Cancelar Ticket
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* MODAL DE CRIAR TICKET *@
+@if (showCreateModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1" @onclick="() => showCreateModal = false">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Novo Ticket de Suporte</h5>
+                    <button type="button" class="btn-close ms-auto" @onclick="() => showCreateModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Assunto <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-3" placeholder="Descreva brevemente o problema"
+                               @bind="newSubject" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">E-mail para contato <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control rounded-3" placeholder="seu@email.com"
+                               @bind="newEmail" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Descrição <span class="text-danger">*</span></label>
+                        <textarea class="form-control rounded-3" rows="4"
+                                  placeholder="Descreva o problema com detalhes..."
+                                  @bind="newDescription"></textarea>
+                    </div>
+                    @if (!string.IsNullOrEmpty(createError))
+                    {
+                        <div class="alert alert-danger small rounded-3">@createError</div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary rounded-pill px-4"
+                            @onclick="() => showCreateModal = false">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-dark rounded-pill px-4"
+                            @onclick="CreateTicket"
+                            disabled="@isCreating">
+                        @if (isCreating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Enviar Ticket
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showSuccessModal)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1" @onclick="() => showSuccessModal = false">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content border-0 shadow-lg text-center p-4" style="border-radius: 24px;">
+                <button type="button" class="btn-close ms-auto" @onclick="() => showSuccessModal = false"></button>
+                <div class="modal-body py-3">
+                    <div style="font-size: 4rem;">🎧</div>
+                    <h4 class="fw-black mt-3 mb-2">Ticket aberto com sucesso!</h4>
+                    <p class="text-muted">Nossa equipe de suporte entrará em contato em breve pelo e-mail <strong>@lastCreatedEmail</strong>.</p>
+                    <button class="btn btn-dark rounded-pill px-4 mt-2" @onclick="() => showSuccessModal = false">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SupportTicket>? tickets;
+    private bool showCreateModal;
+    private bool isCreating;
+    private string newSubject = "";
+    private string newEmail = "";
+    private string newDescription = "";
+    private string? createError;
+    private string? userId;
+    private bool showSuccessModal;
+    private string? lastCreatedEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+            tickets = await TicketService.GetTicketsByUserAsync(userId);
+    }
+
+    private async Task CreateTicket()
+    {
+        if (string.IsNullOrWhiteSpace(newSubject) ||
+            string.IsNullOrWhiteSpace(newEmail) ||
+            string.IsNullOrWhiteSpace(newDescription))
+        {
+            createError = "Preencha todos os campos obrigatórios.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(userId)) return;
+
+        isCreating = true;
+        createError = null;
+
+        await TicketService.CreateTicketAsync(userId, newEmail, newSubject.Trim(), newDescription.Trim());
+
+        lastCreatedEmail = newEmail;
+        tickets = await TicketService.GetTicketsByUserAsync(userId);
+        showCreateModal = false;
+        showSuccessModal = true;
+        newSubject = "";
+        newEmail = "";
+        newDescription = "";
+        isCreating = false;
+    }
+
+    private async Task UpdateStatus(SupportTicket ticket, TicketStatus status)
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+        await TicketService.UpdateStatusAsync(ticket.Id, status, userId, isAdmin: false);
+        tickets = await TicketService.GetTicketsByUserAsync(userId);
+    }
+
+    private static string GetStatusClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Aberto => "bg-warning text-dark",
+        TicketStatus.Resolvido => "bg-success",
+        TicketStatus.Cancelado => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}
