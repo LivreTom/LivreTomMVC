@@ -22,7 +22,6 @@ public class StripeController(
         { 10, 22990 },  // R$ 229,90 → R$ 22,99/token → 23% off
         { 20, 42990 },  // R$ 429,90 → R$ 21,50/token → 28% off
         { 30, 59990 },  // R$ 599,90 → R$ 20,00/token → 33% off
-        { 1, 200 }, // TESTE — R$ 2,00 por 1 token — REMOVER ANTES DO LANÇAMENTO
     };
 
     private const long FullPricePerTokenCents = 3000; // R$ 30,00
