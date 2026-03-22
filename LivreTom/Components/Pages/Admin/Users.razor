@@ -1,0 +1,236 @@
+﻿@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using LivreTom.Models
+@using LivreTom.Services
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject UserManager<ApplicationUser> UserManager
+@inject EmailService EmailService
+
+<PageTitle>Usuários - Admin LivreTom</PageTitle>
+
+<div class="animate-fade-in">
+    <div class="mb-4">
+        <h2 class="fw-black mb-0">Usuários</h2>
+        <p class="text-muted small mb-0">Usuários cadastrados na plataforma.</p>
+    </div>
+
+    @if (users is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando usuários...</p>
+        </div>
+    }
+    else
+    {
+        @* TABELA — só desktop *@
+        <div class="d-none d-md-block table-responsive bg-white shadow-sm rounded-4 p-3">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-uppercase text-muted">
+                        <th>E-mail</th>
+                        <th>Tokens</th>
+                        <th>E-mail confirmado</th>
+                        <th>Provedor</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        <tr class="@(user.ScheduledDeletionAt.HasValue ? "table-danger" : "")">
+                            <td class="fw-medium">@user.Email</td>
+                            <td>
+                                <span class="badge bg-primary rounded-pill px-3 py-1">@user.Credits</span>
+                            </td>
+                            <td>
+                                @if (user.EmailConfirmed)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-x-circle text-muted"></i>
+                                }
+                            </td>
+                            <td class="small text-muted">
+                                @(user.PasswordHash is null ? "Google" : "E-mail/Senha")
+                            </td>
+                            <td>
+                                @if (user.ScheduledDeletionAt.HasValue)
+                                {
+                                    <span class="badge bg-danger rounded-pill px-2">
+                                        <i class="bi bi-trash me-1"></i>
+                                        Excluindo em @user.ScheduledDeletionAt.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success rounded-pill px-2">Ativo</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (user.ScheduledDeletionAt.HasValue)
+                                {
+                                    <button class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                            @onclick="() => OpenCancelDeletionModal(user)">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Desfazer Exclusão
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* CARDS — só mobile *@
+        <div class="d-md-none d-flex flex-column gap-3">
+            @foreach (var user in users)
+            {
+                <div class="card border-0 shadow-sm p-3 @(user.ScheduledDeletionAt.HasValue ? "border-danger" : "")" style="border-radius: 16px;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-medium small">@user.Email</span>
+                        <span class="badge bg-primary rounded-pill px-2">@user.Credits tokens</span>
+                    </div>
+                    <div class="d-flex gap-3 small text-muted mb-2">
+                        <span>
+                            @if (user.EmailConfirmed)
+                            {
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                <span>E-mail confirmado</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle text-muted me-1"></i>
+                                <span>Não confirmado</span>
+                            }
+                        </span>
+                        <span>
+                            <i class="bi @(user.PasswordHash is null ? "bi-google" : "bi-envelope") me-1"></i>
+                            @(user.PasswordHash is null ? "Google" : "E-mail/Senha")
+                        </span>
+                    </div>
+                    @if (user.ScheduledDeletionAt.HasValue)
+                    {
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-danger rounded-pill px-2 small">
+                                <i class="bi bi-trash me-1"></i>
+                                Excluindo em @user.ScheduledDeletionAt.Value.ToString("dd/MM/yyyy")
+                            </span>
+                            <button class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                    @onclick="() => OpenCancelDeletionModal(user)">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Desfazer
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <p class="text-muted small mt-3">
+            <i class="bi bi-info-circle me-1"></i> Total: @users.Count usuário(s)
+        </p>
+    }
+</div>
+
+@* MODAL DE CANCELAR EXCLUSÃO *@
+@if (cancelDeletionTarget is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1" @onclick="CloseCancelDeletionModal">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Cancelar Exclusão de Conta</h5>
+                    <button type="button" class="btn-close ms-auto" @onclick="CloseCancelDeletionModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Tem certeza que deseja cancelar a exclusão da conta de
+                        <strong>@cancelDeletionTarget.Email</strong>?
+                    </p>
+                    <p class="text-muted small">
+                        A conta estava agendada para exclusão em
+                        <strong>@cancelDeletionTarget.ScheduledDeletionAt?.ToString("dd/MM/yyyy")</strong>.
+                        Ao confirmar, o banner de exclusão será removido e o usuário poderá continuar usando a conta normalmente.
+                    </p>
+                    @if (!string.IsNullOrEmpty(cancelDeletionError))
+                    {
+                        <div class="alert alert-danger small rounded-3">@cancelDeletionError</div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary rounded-pill px-4"
+                            @onclick="CloseCancelDeletionModal">
+                        Voltar
+                    </button>
+                    <button class="btn btn-success rounded-pill px-4"
+                            @onclick="ConfirmCancelDeletion"
+                            disabled="@isCancellingDeletion">
+                        @if (isCancellingDeletion)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Confirmar Cancelamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ApplicationUser>? users;
+    private ApplicationUser? cancelDeletionTarget;
+    private bool isCancellingDeletion;
+    private string? cancelDeletionError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await Task.Run(() => UserManager.Users.OrderBy(u => u.Email).ToList());
+    }
+
+    private void OpenCancelDeletionModal(ApplicationUser user)
+    {
+        cancelDeletionTarget = user;
+        cancelDeletionError = null;
+    }
+
+    private void CloseCancelDeletionModal()
+    {
+        cancelDeletionTarget = null;
+        cancelDeletionError = null;
+        isCancellingDeletion = false;
+    }
+
+    private async Task ConfirmCancelDeletion()
+    {
+        if (cancelDeletionTarget is null) return;
+
+        isCancellingDeletion = true;
+        cancelDeletionError = null;
+
+        cancelDeletionTarget.ScheduledDeletionAt = null;
+        var result = await UserManager.UpdateAsync(cancelDeletionTarget);
+
+        if (result.Succeeded)
+        {
+            await LoadUsers();
+            CloseCancelDeletionModal();
+        }
+        else
+        {
+            cancelDeletionError = "Erro ao cancelar exclusão. Tente novamente.";
+            isCancellingDeletion = false;
+        }
+    }
+}

@@ -107,7 +107,8 @@
                             {
                                 <div class="mb-3">
                                     <audio controls preload="none" class="w-100" style="border-radius: 12px;"
-                                           data-order-id="@order.Id">
+                                           data-order-id="@order.Id"
+                                           controlslist="@(order.DownloadConfirmed ? "" : "nodownload")">
                                         <source src="@(order.DownloadConfirmed ? $"/api/audio/{order.Id}" : $"/api/audio/{order.Id}/preview?t={_sessionId}")" type="audio/mpeg" />
                                     </audio>
 
@@ -165,28 +166,25 @@
         <div class="modal-backdrop show"></div>
         <div class="modal d-block" tabindex="-1" style="z-index: 1050;">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Confirmação de Download</h5>
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Download de Música</h5>
                         <button type="button" class="btn-close" @onclick="CloseDownloadModal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="small">
-                            <strong>Antes de baixar sua música, leia atentamente:</strong><br />
-                            Esta produção musical foi criada exclusivamente para você, com base nas informações e preferências fornecidas no momento do pedido, caracterizando-se como produto personalizado e sob demanda.
-                            De acordo com o Art. 49 do Código de Defesa do Consumidor (Lei 8.078/90), o direito de arrependimento de 7 dias aplica-se a compras realizadas fora do estabelecimento comercial. No entanto, o § único do Art. 49 estabelece que, no caso de serviços já iniciados ou produtos personalizados entregues, o direito de arrependimento pode ser afastado.
-                            Ao confirmar o download, você declara:
+                        <p class="text-muted small mb-3">
+                            Para baixar sua música é necessário aceitar os termos de entrega. Leia atentamente antes de confirmar.
                         </p>
-                        <ul class="small">
-                            <li>Que recebeu e teve acesso ao produto digital contratado</li>
-                            <li>Que compreende que, por ser uma produção personalizada, não é passível de reembolso após o download</li>
-                            <li>Que está de acordo com os Termos de Uso e Política de Entrega da LivreTom</li>
-                        </ul>
 
-                        <div class="form-check mt-3">
+                        <button class="btn btn-outline-dark rounded-pill w-100 mb-3"
+                                @onclick="() => showTermsModal = true">
+                            <i class="bi bi-file-text me-2"></i> Ler Termos de Entrega
+                        </button>
+
+                        <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="confirmDownloadCheck" @bind="acceptTermsChecked" />
-                            <label class="form-check-label" for="confirmDownloadCheck">
-                                Confirmo que li e aceito as condições acima
+                            <label class="form-check-label small" for="confirmDownloadCheck">
+                                Confirmo que li e aceito os Termos de Entrega da LivreTom
                             </label>
                         </div>
 
@@ -195,14 +193,60 @@
                             <div class="text-danger small mt-2">@downloadModalError</div>
                         }
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" @onclick="CloseDownloadModal">Voltar</button>
-                        <button class="btn btn-primary" @onclick="ConfirmAndDownload">Confirmar e Baixar</button>
+                    <div class="modal-footer border-0 pt-0">
+                        <button class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseDownloadModal">Voltar</button>
+                        <button class="btn btn-dark rounded-pill px-4" @onclick="ConfirmAndDownload"
+                                disabled="@(!acceptTermsChecked)">
+                            <i class="bi bi-download me-1"></i> Confirmar e Baixar
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     }
+
+    @* MODAL DE TERMOS *@
+    @if (showTermsModal)
+    {
+        <div class="modal-backdrop show" style="z-index: 1060;"></div>
+        <div class="modal d-block" tabindex="-1" style="z-index: 1065;">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Termos de Entrega</h5>
+                        <button type="button" class="btn-close" @onclick="() => showTermsModal = false"></button>
+                    </div>
+                    <div class="modal-body small">
+                        <p><strong>Antes de baixar sua música, leia atentamente:</strong></p>
+                        <p>
+                            Esta produção musical foi criada <strong>exclusivamente para você</strong>, com base nas informações
+                            e preferências fornecidas no momento do pedido, caracterizando-se como <strong>
+                            produto personalizado
+                            e sob demanda
+                        </strong>.
+                    </p>
+                    <p>
+                        De acordo com o <strong>Art. 49 do Código de Defesa do Consumidor (Lei 8.078/90)</strong>, o direito
+                        de arrependimento de 7 dias aplica-se a compras realizadas fora do estabelecimento comercial. No entanto,
+                        o <strong>§ único do Art. 49</strong> estabelece que, no caso de serviços já iniciados ou produtos
+                        personalizados entregues, o direito de arrependimento pode ser afastado.
+                    </p>
+                    <p><strong>Ao confirmar o download, você declara:</strong></p>
+                    <ul>
+                        <li>Que recebeu e teve acesso ao produto digital contratado</li>
+                        <li>Que compreende que, por ser uma produção personalizada, não é passível de reembolso após o download</li>
+                        <li>Que está de acordo com os Termos de Uso e Política de Entrega da LivreTom</li>
+                    </ul>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-dark rounded-pill px-4" @onclick="() => showTermsModal = false">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 </div>
 
 @code {
@@ -219,6 +263,7 @@
     private bool showDownloadModal;
     private bool acceptTermsChecked;
     private string? downloadModalError;
+    private bool showTermsModal;
 
     protected override async Task OnInitializedAsync()
     {
@@ -256,6 +301,7 @@
     private void CloseDownloadModal()
     {
         showDownloadModal = false;
+        showTermsModal = false;
         downloadTarget = null;
         acceptTermsChecked = false;
         downloadModalError = null;

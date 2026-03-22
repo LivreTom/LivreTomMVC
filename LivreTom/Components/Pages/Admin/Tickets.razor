@@ -1,0 +1,230 @@
+﻿@page "/admin/tickets"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using LivreTom.Models
+@using LivreTom.Services
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject TicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Tickets - Admin LivreTom</PageTitle>
+
+<div class="animate-fade-in">
+    <div class="mb-4">
+        <h2 class="fw-black mb-0">Tickets de Suporte</h2>
+        <p class="text-muted small mb-0">Gerencie os tickets abertos pelos usuários.</p>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <button class="btn @(activeFilter is null ? "btn-dark" : "btn-outline-dark") rounded-pill px-2 px-md-3 small"
+                @onclick="() => activeFilter = null">
+            Todos <span class="badge bg-light text-dark ms-1">@(tickets?.Count ?? 0)</span>
+        </button>
+        <button class="btn @(activeFilter == "meus" ? "btn-primary" : "btn-outline-primary") rounded-pill px-2 px-md-3 small"
+                @onclick='() => activeFilter = "meus"'>
+            Atribuídos a mim <span class="badge bg-light text-dark ms-1">@(tickets?.Count(t => t.AssignedToId == adminId) ?? 0)</span>
+        </button>
+        <button class="btn @(activeFilter == "Aberto" ? "btn-warning" : "btn-outline-warning") rounded-pill px-2 px-md-3 small"
+                @onclick='() => activeFilter = "Aberto"'>
+            Abertos <span class="badge bg-light text-dark ms-1">@(tickets?.Count(t => t.Status == TicketStatus.Aberto) ?? 0)</span>
+        </button>
+        <button class="btn @(activeFilter == "Resolvido" ? "btn-success" : "btn-outline-success") rounded-pill px-2 px-md-3 small"
+                @onclick='() => activeFilter = "Resolvido"'>
+            Resolvidos
+        </button>
+    </div>
+
+    @if (tickets is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Carregando tickets...</p>
+        </div>
+    }
+    else if (filteredTickets.Count == 0)
+    {
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 24px;">
+            <div class="mb-3 display-4">📋</div>
+            <h5 class="fw-bold">Nenhum ticket encontrado.</h5>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var ticket in filteredTickets)
+            {
+                <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="fw-bold">#@ticket.Id — @ticket.Subject</span>
+                            <div class="text-muted small mt-1">
+                                <i class="bi bi-person me-1"></i> @(ticket.User?.Email ?? "—")
+                                <span class="ms-3"><i class="bi bi-envelope me-1"></i> @ticket.Email</span>
+                                <span class="ms-3"><i class="bi bi-calendar3 me-1"></i> @ticket.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        </div>
+                        <span class="badge @GetStatusClass(ticket.Status) rounded-pill px-3 py-1 flex-shrink-0 ms-2">
+                            @ticket.Status
+                        </span>
+                    </div>
+
+                    <p class="small text-muted mb-3">@ticket.Description</p>
+
+                    @if (ticket.Status == TicketStatus.Cancelado && !string.IsNullOrEmpty(ticket.CancelReason))
+                    {
+                        <div class="alert alert-secondary small rounded-3 mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Motivo do cancelamento:</strong> @ticket.CancelReason
+                        </div>
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="small text-muted">
+                            @if (ticket.AssignedTo is not null)
+                            {
+                                <i class="bi bi-person-check me-1 text-success"></i>
+                                <span>Atribuído a <strong>@ticket.AssignedTo.Email?.Split('@')[0]</strong></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-person-dash me-1 text-muted"></i>
+                                <span>Sem atribuição</span>
+                            }
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            @if (ticket.Status == TicketStatus.Aberto && ticket.AssignedToId != adminId)
+                            {
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                        @onclick="() => AssignToMe(ticket)">
+                                    <i class="bi bi-person-check me-1"></i> Atribuir a mim
+                                </button>
+                            }
+                            @if (ticket.Status == TicketStatus.Aberto && ticket.AssignedToId is not null)
+                            {
+                                <button class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                        @onclick="() => UpdateStatus(ticket, TicketStatus.Resolvido)">
+                                    <i class="bi bi-check-lg me-1"></i> Resolver
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                        @onclick="() => OpenCancelModal(ticket)">
+                                    <i class="bi bi-x-lg me-1"></i> Cancelar
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (cancelTarget is not null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block fade show" tabindex="-1" @onclick="CloseCancelModal">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Cancelar Ticket #@cancelTarget.Id</h5>
+                    <button type="button" class="btn-close ms-auto" @onclick="CloseCancelModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Informe o motivo do cancelamento. O usuário poderá visualizar essa mensagem.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Motivo <span class="text-danger">*</span></label>
+                        <textarea class="form-control rounded-3" rows="3"
+                                  placeholder="Descreva o motivo do cancelamento..."
+                                  @bind="cancelReason"></textarea>
+                    </div>
+                    @if (!string.IsNullOrEmpty(cancelError))
+                    {
+                        <div class="alert alert-danger small rounded-3">@cancelError</div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseCancelModal">
+                        Voltar
+                    </button>
+                    <button class="btn btn-danger rounded-pill px-4" @onclick="ConfirmCancel">
+                        Confirmar Cancelamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SupportTicket>? tickets;
+    private string? activeFilter;
+    private string? adminId;
+    private SupportTicket? cancelTarget;
+    private string cancelReason = "";
+    private string? cancelError;
+
+    private void OpenCancelModal(SupportTicket ticket)
+    {
+        cancelTarget = ticket;
+        cancelReason = "";
+        cancelError = null;
+    }
+
+    private void CloseCancelModal()
+    {
+        cancelTarget = null;
+        cancelReason = "";
+        cancelError = null;
+    }
+
+    private async Task ConfirmCancel()
+    {
+        if (string.IsNullOrWhiteSpace(cancelReason))
+        {
+            cancelError = "Informe o motivo do cancelamento.";
+            return;
+        }
+
+        if (cancelTarget is null || string.IsNullOrEmpty(adminId)) return;
+
+        await TicketService.UpdateStatusAsync(cancelTarget.Id, TicketStatus.Cancelado, adminId, isAdmin: true, cancelReason: cancelReason.Trim());
+        tickets = await TicketService.GetAllTicketsAsync();
+        CloseCancelModal();
+    }
+
+    private List<SupportTicket> filteredTickets => tickets?.Where(t =>
+        activeFilter is null ? true :
+        activeFilter == "meus" ? t.AssignedToId == adminId :
+        t.Status.ToString() == activeFilter
+    ).ToList() ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        adminId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        tickets = await TicketService.GetAllTicketsAsync();
+    }
+
+    private async Task UpdateStatus(SupportTicket ticket, TicketStatus status)
+    {
+        if (string.IsNullOrEmpty(adminId)) return;
+        await TicketService.UpdateStatusAsync(ticket.Id, status, adminId, isAdmin: true);
+        tickets = await TicketService.GetAllTicketsAsync();
+    }
+
+    private async Task AssignToMe(SupportTicket ticket)
+    {
+        if (string.IsNullOrEmpty(adminId)) return;
+        await TicketService.AssignTicketAsync(ticket.Id, adminId);
+        tickets = await TicketService.GetAllTicketsAsync();
+    }
+
+    private static string GetStatusClass(TicketStatus status) => status switch
+    {
+        TicketStatus.Aberto => "bg-warning text-dark",
+        TicketStatus.Resolvido => "bg-success",
+        TicketStatus.Cancelado => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

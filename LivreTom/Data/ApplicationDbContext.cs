@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MusicOrder> MusicOrders { get; set; }
     public DbSet<StepQuestion> StepQuestions { get; set; }
     public DbSet<UserAnswer> UserAnswers { get; set; }
+    public DbSet<SupportTicket> SupportTickets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
