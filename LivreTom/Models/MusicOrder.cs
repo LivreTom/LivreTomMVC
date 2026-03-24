@@ -8,6 +8,7 @@ public class MusicOrder
     public int CreditsSpent { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string Status { get; set; } = "Pendente";
+    public string? FormData { get; set; } // Respostas do formulário separadas por ;
     public string? SunoSongId { get; set; }
     public string? AudioUrl { get; set; }
     public string? Lyrics { get; set; }

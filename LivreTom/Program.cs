@@ -83,6 +83,7 @@ builder.Services.AddScoped<AuthenticationStateService>();
 // Serviços de negócio
 builder.Services.AddScoped<QuestionService>();
 builder.Services.AddScoped<CreditService>();
+builder.Services.AddHttpClient<GroqService>();
 builder.Services.AddScoped<MusicService>();
 builder.Services.AddSingleton<IResend>(_ =>
     ResendClient.Create(builder.Configuration["Resend:ApiKey"]!));
@@ -93,6 +94,15 @@ builder.Services.AddScoped<TicketService>();
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
 var app = builder.Build();
+
+// Validação de configurações críticas no startup
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var groqKey = app.Configuration["Groq:ApiKey"];
+if (string.IsNullOrWhiteSpace(groqKey))
+    startupLogger.LogWarning("[Startup] Groq:ApiKey não está configurada. FinalPrompt não será gerado.");
+else
+    startupLogger.LogInformation("[Startup] Groq:ApiKey configurada ({Length} caracteres). Modelo: {Model}",
+        groqKey.Length, app.Configuration["Groq:Model"] ?? "não definido");
 
 // Seed da role Admin
 using (var scope = app.Services.CreateScope())

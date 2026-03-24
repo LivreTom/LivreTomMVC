@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LivreTom.Services;
 
-public class MusicService(ApplicationDbContext context, CreditService creditService)
+public class MusicService(ApplicationDbContext context, CreditService creditService, GroqService groqService, ILogger<MusicService> logger)
 {
     public async Task<MusicOrder?> GetOrderByIdAsync(int orderId)
         => await context.MusicOrders.FindAsync(orderId);
@@ -30,11 +30,24 @@ public class MusicService(ApplicationDbContext context, CreditService creditServ
             .ToListAsync();
     }
 
-    public async Task<(bool Success, string Message)> CreateOrderAsync(string userId, string category, Dictionary<string, string> userAnswers)
+    public async Task<(bool Success, string Message)> CreateOrderAsync(string userId, string category, IEnumerable<KeyValuePair<string, string>> userAnswers)
     {
+        logger.LogInformation("[MusicService] CreateOrderAsync iniciado — userId={UserId}, category={Category}", userId, category);
+
         var creditConsumed = await creditService.ConsumeCreditAsync(userId);
         if (!creditConsumed)
             return (false, "Você não possui tokens de música suficientes.");
+
+        var answersList = userAnswers.ToList();
+
+        // Criar string com as respostas separadas por ;
+        var formDataString = string.Join(";", answersList.Select(a => a.Value));
+        logger.LogInformation("[MusicService] FormData montado: {FormData}", formDataString);
+
+        // Gerar script otimizado para o Suno via Groq
+        logger.LogInformation("[MusicService] Chamando GroqService...");
+        var finalPrompt = await groqService.GenerateSunoScriptAsync(category, answersList);
+        logger.LogInformation("[MusicService] Groq retornou: {Result}", finalPrompt is null ? "NULL" : $"{finalPrompt.Length} caracteres");
 
         var order = new MusicOrder
         {
@@ -42,13 +55,14 @@ public class MusicService(ApplicationDbContext context, CreditService creditServ
             Status = "Pendente",
             CreatedAt = DateTime.UtcNow,
             CreditsSpent = 1,
-            FinalPrompt = $"Geração de {category} baseada em {userAnswers.Count} respostas."
+            FinalPrompt = finalPrompt,
+            FormData = formDataString
         };
 
         context.MusicOrders.Add(order);
         await context.SaveChangesAsync();
 
-        foreach (var answer in userAnswers)
+        foreach (var answer in answersList)
         {
             context.UserAnswers.Add(new UserAnswer
             {
