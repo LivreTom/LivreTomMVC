@@ -88,7 +88,7 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     private List<StepQuestion> Questions = new();
-    private Dictionary<string, string> Answers = new();
+    private Dictionary<int, string> Answers = new();
     private int CurrentStepIndex = 0;
     private string CurrentAnswer = "";
     private bool Loading = false;
@@ -110,14 +110,12 @@
 
     private void SaveCurrentAnswer()
     {
-        var key = Questions[CurrentStepIndex].SystemKey;
-        Answers[key] = CurrentAnswer;
+        Answers[CurrentStepIndex] = CurrentAnswer;
     }
 
     private void LoadNextAnswer()
     {
-        var key = Questions[CurrentStepIndex].SystemKey;
-        CurrentAnswer = Answers.ContainsKey(key) ? Answers[key] : "";
+        CurrentAnswer = Answers.TryGetValue(CurrentStepIndex, out var saved) ? saved : "";
     }
 
     private async Task Finalize()
@@ -134,7 +132,14 @@
 
             if (!string.IsNullOrEmpty(userId))
             {
-                var result = await MusicService.CreateOrderAsync(userId, Category, Answers);
+                var userAnswers = new List<KeyValuePair<string, string>>();
+                for (int i = 0; i < Questions.Count; i++)
+                {
+                    if (Answers.TryGetValue(i, out var ans))
+                        userAnswers.Add(new KeyValuePair<string, string>(Questions[i].SystemKey, ans));
+                }
+
+                var result = await MusicService.CreateOrderAsync(userId, Category, userAnswers);
 
                 if (result.Success)
                 {

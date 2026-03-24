@@ -319,7 +319,7 @@
                     <div class="row g-4">
                         @foreach (var s in ServicosList)
                         {
-                            <div class="col-md-4">
+                            <div class="col-6 col-md-6">
                                 <div class="feature-card p-4 text-center h-100 cursor-pointer border-0 shadow-sm" @onclick='() => IniciarCriacao(s.Title)'>
                                     <div class="icon-circle mx-auto mb-3">@s.Icon</div>
                                     <h5 class="fw-bold text-dark">@s.Title</h5>
@@ -331,7 +331,7 @@
 
                     <div class="mt-5 p-5 border-dashed rounded-4 text-center text-muted">
                         <i class="bi bi-music-note-list fs-1 d-block mb-2"></i>
-                        <p>As músicas que produzimos para você aparecerão aqui.</p>
+                        <p>As músicas que produzimos aparecerão na aba <strong>Meus Pedidos</strong>.</p>
                     </div>
                 </div>
             </NotAuthorized>
@@ -419,7 +419,7 @@
                 <div class="row g-4 justify-content-center w-100">
                     @foreach (var s in ServicosList)
                     {
-                        <div class="col-md-4">
+                        <div class="col-6 col-md-6">
                             <div class="feature-card p-4 text-center h-100 cursor-pointer border-0" @onclick="AbrirLogin">
                                 <div class="icon-circle mx-auto mb-3">@s.Icon</div>
                                 <h5 class="fw-bold text-dark">@s.Title</h5>
@@ -458,7 +458,7 @@
 
 <AuthModal IsVisible="showAuthModal" OnClose="HandleLoginClose" InitialError="@(clearMessages ? "" : AuthService.LoginError)" InitialMode="@(clearMessages? AuthMode.Login: AuthService.AuthMode)" />
 <AuthModal IsVisible="showRegisterModal" OnClose="HandleRegisterClose" InitialError="@(clearMessages ? "" : AuthService.LoginError)" InitialMode="@(clearMessages ? AuthMode.Register : AuthService.AuthMode)" />
-<WizardModal IsVisible="showWizard" Category="@selectedCategory" OnClose="() => showWizard = false" />
+<FormWizardModal IsVisible="showFormWizard" Category="@selectedCategory" OnClose="HandleFormWizardClose" />
 
 @if (showMaintenanceModal)
 {
@@ -485,7 +485,7 @@
     // --- Shared ---
     private bool showAuthModal = false;
     private bool showRegisterModal = false;
-    private bool showWizard = false;
+    private bool showFormWizard = false;
     private string selectedCategory = "";
     private bool clearMessages = false;
     private bool showMaintenanceModal = false;
@@ -562,20 +562,31 @@
     private void HandleLoginClose() { showAuthModal = false; clearMessages = false; AuthService.ClearErrors(); }
     private void HandleRegisterClose() { showRegisterModal = false; clearMessages = false; AuthService.ClearErrors(); }
 
-    private static readonly Dictionary<string, string> CategoryMap = new() { { "Homenagens", "Homenagem" } };
+    private static readonly Dictionary<string, string> CategoryMap = new()
+    {
+        { "Homenagens", "1" },
+        { "Relaxamento", "2" },
+        { "Criadores", "3" },
+        { "Personalizado", "4" }
+    };
 
     private void IniciarCriacao(string categoria)
     {
-        showMaintenanceModal = true;
+        selectedCategory = CategoryMap.GetValueOrDefault(categoria, categoria);
+        showFormWizard = true;
+    }
+
+    private void HandleFormWizardClose()
+    {
+        showFormWizard = false;
+        selectedCategory = "";
     }
 
     private static readonly List<ServiceItem> ServicosList =
     [
-        new("🎁", "Homenagens", "Composições exclusivas para tornar datas inesquecíveis."),
+        new("🎁", "Homenagens", "Composições exclusivas para criar momentos inesquecíveis."),
         new("🧘", "Relaxamento", "Produção de sons ambientes para foco e meditação."),
-        new("📹", "Criadores", "Trilhas originais curadas para seus vídeos."),
-        new("🪄", "Masterização", "Tratamento profissional para melhorar seus áudios."),
-        new("↔️", "Versões Estendidas", "Expandimos trechos curtos em músicas completas."),
-        new("🎸", "Custom Solos", "Produção de arranjos instrumentais sob medida.")
+        new("📹", "Criadores", "Trilhas originais criadas para seus vídeos."),
+        new("🎸", "Personalizado", "Produção de música sob medida para você.")
     ];
 }

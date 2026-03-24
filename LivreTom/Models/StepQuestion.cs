@@ -9,4 +9,5 @@ public class StepQuestion
     public string SystemKey { get; set; } = string.Empty; // ex: "nome_alvo", "ritmo_preferido"
     public string InputType { get; set; } = "text"; // text, textarea, select
     public string? OptionsJson { get; set; } // Caso seja um select, salvamos as opções aqui
+    public string? Placeholder { get; set; } // Texto do placeholder para inputs
 }
