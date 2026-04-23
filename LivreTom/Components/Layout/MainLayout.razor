@@ -273,7 +273,7 @@
                                     </div>
 
                                     <div class="plan-price">R$ @CustomTotalFormatted</div>
-                                    <div class="plan-unit">R$ 30,00 / token · sem desconto</div>
+                                    <div class="plan-unit">R$ 20,00 / token · sem desconto por volume</div>
 
                                     <button class="btn btn-outline-dark btn-sm rounded-pill w-100 mt-auto fw-bold"
                                             disabled="@(isPurchasing || customTokenCount < 1)"
@@ -334,18 +334,18 @@
 
     private string CustomTotalFormatted =>
         customTokenCount > 0
-            ? (customTokenCount * 30m).ToString("N2", PtBr)
+            ? (customTokenCount * 20m).ToString("N2", PtBr)
             : "0,00";
 
     private sealed record TokenPlan(int Tokens, string Price, string UnitPrice, int Discount, string? Badge, bool Featured, bool BestDeal);
 
     private static readonly TokenPlan[] tokenPlans =
     [
-        new(3,   "84,90",  "28,30", 6,  null,               false, false),
-        new(5,   "129,90", "25,98", 13, null,               false, false),
-        new(10,  "229,90", "22,99", 23, "⭐ Popular",       true,  false),
-        new(20,  "429,90", "21,50", 28, null,               false, false),
-        new(30,  "599,90", "20,00", 33, "🔥 Melhor Custo",  false, true),
+        new(3,   "57,00",  "19,00", 5,  null,               false, false),
+        new(5,   "90,00",  "18,00", 10, null,               false, false),
+        new(10,  "170,00", "17,00", 15, "⭐ Popular",       true,  false),
+        new(20,  "320,00", "16,00", 20, null,               false, false),
+        new(30,  "450,00", "15,00", 25, "🔥 Melhor Custo",  false, true),
     ];
 
     private async void RefreshLayout()

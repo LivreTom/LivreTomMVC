@@ -10,7 +10,9 @@ public class MusicOrder
     public string Status { get; set; } = "Pendente";
     public string? FormData { get; set; } // Respostas do formulário separadas por ;
     public string? SunoSongId { get; set; }
+    public string? SunoSongIdV2 { get; set; }
     public string? AudioUrl { get; set; }
+    public string? AudioUrlV2 { get; set; }
     public string? Lyrics { get; set; }
     public string? CoverImageUrl { get; set; }
     public string? Title { get; set; }
@@ -19,6 +21,12 @@ public class MusicOrder
         ? AudioUrl
         : !string.IsNullOrEmpty(SunoSongId)
             ? $"https://cdn1.suno.ai/{SunoSongId}.mp3"
+            : null;
+
+    public string? ResolvedAudioUrlV2 => !string.IsNullOrEmpty(AudioUrlV2)
+        ? AudioUrlV2
+        : !string.IsNullOrEmpty(SunoSongIdV2)
+            ? $"https://cdn1.suno.ai/{SunoSongIdV2}.mp3"
             : null;
 
     public bool IsExpired => CreatedAt < DateTime.UtcNow.AddDays(-30);

@@ -17,14 +17,14 @@ public class StripeController(
     // Planos com desconto: tokens → preço total em centavos
     private static readonly Dictionary<int, long> Plans = new()
     {
-        { 3,  8490 },   // R$ 84,90  → R$ 28,30/token → 6% off
-        { 5,  12990 },  // R$ 129,90 → R$ 25,98/token → 13% off
-        { 10, 22990 },  // R$ 229,90 → R$ 22,99/token → 23% off
-        { 20, 42990 },  // R$ 429,90 → R$ 21,50/token → 28% off
-        { 30, 59990 },  // R$ 599,90 → R$ 20,00/token → 33% off
+        { 3,  5700 },
+        { 5,  9000 },
+        { 10, 17000 },
+        { 20, 32000 },
+        { 30, 45000 },
     };
 
-    private const long FullPricePerTokenCents = 3000; // R$ 30,00
+    private const long FullPricePerTokenCents = 2000; // R$ 20,00
 
     // Rastreia sessões já processadas para evitar crédito duplicado (webhook + redirect)
     // Em produção com múltiplas instâncias, substituir por tabela no banco de dados

@@ -10,19 +10,19 @@ namespace LivreTom.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Placeholder",
-                table: "StepQuestions",
-                type: "text",
-                nullable: true);
+            migrationBuilder.Sql("""
+                ALTER TABLE "StepQuestions"
+                ADD COLUMN IF NOT EXISTS "Placeholder" text;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Placeholder",
-                table: "StepQuestions");
+            migrationBuilder.Sql("""
+                ALTER TABLE "StepQuestions"
+                DROP COLUMN IF EXISTS "Placeholder";
+                """);
         }
     }
 }

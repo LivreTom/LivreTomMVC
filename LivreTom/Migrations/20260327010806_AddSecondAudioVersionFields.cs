@@ -5,14 +5,19 @@
 namespace LivreTom.Migrations
 {
     /// <inheritdoc />
-    public partial class AddFormDataToMusicOrder : Migration
+    public partial class AddSecondAudioVersionFields : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
                 ALTER TABLE "MusicOrders"
-                ADD COLUMN IF NOT EXISTS "FormData" text;
+                ADD COLUMN IF NOT EXISTS "AudioUrlV2" text;
+                """);
+
+            migrationBuilder.Sql("""
+                ALTER TABLE "MusicOrders"
+                ADD COLUMN IF NOT EXISTS "SunoSongIdV2" text;
                 """);
         }
 
@@ -21,7 +26,12 @@ namespace LivreTom.Migrations
         {
             migrationBuilder.Sql("""
                 ALTER TABLE "MusicOrders"
-                DROP COLUMN IF EXISTS "FormData";
+                DROP COLUMN IF EXISTS "AudioUrlV2";
+                """);
+
+            migrationBuilder.Sql("""
+                ALTER TABLE "MusicOrders"
+                DROP COLUMN IF EXISTS "SunoSongIdV2";
                 """);
         }
     }

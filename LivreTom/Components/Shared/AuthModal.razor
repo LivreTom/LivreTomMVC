@@ -265,7 +265,7 @@
 
     private (string Title, string Subtitle) ModalText => CurrentMode switch
     {
-        AuthMode.Login => ("Bem-vindo de volta", "Acesse para criar suas músicas"),
+        AuthMode.Login => ("Já possui conta?", "Acesse para criar suas músicas"),
         AuthMode.Register => ("Crie sua conta", "A senha deve ser forte para sua segurança"),
         AuthMode.ForgotPassword => ("Esqueci minha senha", "Digite seu e-mail para receber o link de redefinição"),
         AuthMode.ResetPassword => ("Redefinir senha", "Digite sua nova senha"),

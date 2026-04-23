@@ -103,28 +103,64 @@
                             }
 
                             @* --- PLAYER DE ÁUDIO + DOWNLOAD --- *@
-                            @if (order.Status == "Concluído" && !string.IsNullOrEmpty(order.ResolvedAudioUrl))
+                            @if (order.Status == "Concluído" && (!string.IsNullOrEmpty(order.ResolvedAudioUrl) || !string.IsNullOrEmpty(order.ResolvedAudioUrlV2)))
                             {
-                                <div class="mb-3">
-                                    <audio controls preload="none" class="w-100" style="border-radius: 12px;"
-                                           data-order-id="@order.Id"
-                                           controlslist="@(order.DownloadConfirmed ? "" : "nodownload")">
-                                        <source src="@(order.DownloadConfirmed ? $"/api/audio/{order.Id}" : $"/api/audio/{order.Id}/preview?t={_sessionId}")" type="audio/mpeg" />
-                                    </audio>
-
-                                    @if (!order.DownloadConfirmed)
+                                <div class="mb-3 d-flex flex-column gap-3">
+                                    @if (!string.IsNullOrEmpty(order.ResolvedAudioUrl))
                                     {
-                                        <div class="alert d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3 small"
-                                             style="background-color: #fffbeb; color: #b45309; border: none;">
-                                            <i class="bi bi-lock-fill"></i>
-                                            <span>Prévia de 30 segundos. <button class="btn btn-link p-0 small fw-bold" style="color: #b45309;" @onclick="() => OnDownloadClick(order)">Baixar para ouvir completo.</button></span>
+                                        <div class="p-3 rounded-3 border">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-semibold small text-dark">Versão 1</span>
+                                            </div>
+                                            <audio controls preload="none" class="w-100" style="border-radius: 12px;"
+                                                   data-order-id="@GetAudioDomId(order, 1)"
+                                                   controlslist="@(order.DownloadConfirmed ? "" : "nodownload")">
+                                                <source src="@GetAudioSource(order, 1)" type="audio/mpeg" />
+                                            </audio>
+
+                                            @if (!order.DownloadConfirmed)
+                                            {
+                                                <div class="alert d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3 small"
+                                                     style="background-color: #fffbeb; color: #b45309; border: none;">
+                                                    <i class="bi bi-lock-fill"></i>
+                                                    <span>Prévia de 30 segundos. <button class="btn btn-link p-0 small fw-bold" style="color: #b45309;" @onclick="() => OnDownloadClick(order, 1)">Baixar para ouvir completo.</button></span>
+                                                </div>
+                                            }
+
+                                            <button class="btn btn-sm btn-outline-dark rounded-pill w-100 mt-2"
+                                                    @onclick="() => OnDownloadClick(order, 1)">
+                                                <i class="bi bi-download me-1"></i> Baixar MP3 (V1)
+                                            </button>
                                         </div>
                                     }
 
-                                    <button class="btn btn-sm btn-outline-dark rounded-pill w-100 mt-2"
-                                            @onclick="() => OnDownloadClick(order)">
-                                        <i class="bi bi-download me-1"></i> Baixar MP3
-                                    </button>
+                                    @if (!string.IsNullOrEmpty(order.ResolvedAudioUrlV2))
+                                    {
+                                        <div class="p-3 rounded-3 border bg-light-subtle">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-semibold small text-dark">Versão 2</span>
+                                            </div>
+                                            <audio controls preload="none" class="w-100" style="border-radius: 12px;"
+                                                   data-order-id="@GetAudioDomId(order, 2)"
+                                                   controlslist="@(order.DownloadConfirmed ? "" : "nodownload")">
+                                                <source src="@GetAudioSource(order, 2)" type="audio/mpeg" />
+                                            </audio>
+
+                                            @if (!order.DownloadConfirmed)
+                                            {
+                                                <div class="alert d-flex align-items-center gap-2 py-2 px-3 mt-2 mb-0 rounded-3 small"
+                                                     style="background-color: #fffbeb; color: #b45309; border: none;">
+                                                    <i class="bi bi-lock-fill"></i>
+                                                    <span>Prévia de 30 segundos. <button class="btn btn-link p-0 small fw-bold" style="color: #b45309;" @onclick="() => OnDownloadClick(order, 2)">Baixar para ouvir completo.</button></span>
+                                                </div>
+                                            }
+
+                                            <button class="btn btn-sm btn-outline-dark rounded-pill w-100 mt-2"
+                                                    @onclick="() => OnDownloadClick(order, 2)">
+                                                <i class="bi bi-download me-1"></i> Baixar MP3 (V2)
+                                            </button>
+                                        </div>
+                                    }
                                 </div>
                             }
                             else if (order.Status == "Pendente")
@@ -174,6 +210,9 @@
                     <div class="modal-body">
                         <p class="text-muted small mb-3">
                             Para baixar sua música é necessário aceitar os termos de entrega. Leia atentamente antes de confirmar.
+                        </p>
+                        <p class="small mb-3">
+                            <strong>Versão selecionada:</strong> @(downloadTargetVersion == 2 ? "Versão 2" : "Versão 1")
                         </p>
 
                         <button class="btn btn-outline-dark rounded-pill w-100 mb-3"
@@ -260,6 +299,7 @@
 
     // Campos para modal de download
     private MusicOrder? downloadTarget;
+    private int downloadTargetVersion = 1;
     private bool showDownloadModal;
     private bool acceptTermsChecked;
     private string? downloadModalError;
@@ -280,19 +320,27 @@
 
         foreach (var order in orders.Where(o => o.Status == "Concluído" && !o.DownloadConfirmed))
         {
-            await JS.InvokeVoidAsync("initPreviewPlayer", order.Id, 30);
+            if (!string.IsNullOrEmpty(order.ResolvedAudioUrl))
+                await JS.InvokeVoidAsync("initPreviewPlayer", GetAudioDomId(order, 1), 30);
+
+            if (!string.IsNullOrEmpty(order.ResolvedAudioUrlV2))
+                await JS.InvokeVoidAsync("initPreviewPlayer", GetAudioDomId(order, 2), 30);
         }
     }
 
-    private async Task OnDownloadClick(MusicOrder order)
+    private async Task OnDownloadClick(MusicOrder order, int version)
     {
+        if (version == 2 && string.IsNullOrEmpty(order.ResolvedAudioUrlV2))
+            return;
+
         if (order.DownloadConfirmed)
         {
-            await StartDownload(order);
+            await StartDownload(order, version);
             return;
         }
 
         downloadTarget = order;
+        downloadTargetVersion = version;
         acceptTermsChecked = false;
         downloadModalError = null;
         showDownloadModal = true;
@@ -303,6 +351,7 @@
         showDownloadModal = false;
         showTermsModal = false;
         downloadTarget = null;
+        downloadTargetVersion = 1;
         acceptTermsChecked = false;
         downloadModalError = null;
     }
@@ -339,14 +388,30 @@
 
         StateHasChanged();
         await Task.Delay(100); // aguarda o Blazor re-renderizar com a nova URL
-        await JS.InvokeVoidAsync("removePreviewLimit", downloadTarget.Id, $"/api/audio/{downloadTarget.Id}");
-        await StartDownload(downloadTarget);
+        if (!string.IsNullOrEmpty(downloadTarget.ResolvedAudioUrl))
+            await JS.InvokeVoidAsync("removePreviewLimit", GetAudioDomId(downloadTarget, 1), GetAudioSource(downloadTarget, 1));
+
+        if (!string.IsNullOrEmpty(downloadTarget.ResolvedAudioUrlV2))
+            await JS.InvokeVoidAsync("removePreviewLimit", GetAudioDomId(downloadTarget, 2), GetAudioSource(downloadTarget, 2));
+
+        await StartDownload(downloadTarget, downloadTargetVersion);
     }
 
-    private async Task StartDownload(MusicOrder order)
+    private async Task StartDownload(MusicOrder order, int version)
     {
-        var filename = $"{order.Title ?? "musica"}.mp3";
-        await JS.InvokeVoidAsync("downloadFile", $"/api/audio/{order.Id}", filename);
+        var suffix = version == 2 ? " - V2" : " - V1";
+        var filename = $"{order.Title ?? "musica"}{suffix}.mp3";
+        await JS.InvokeVoidAsync("downloadFile", $"/api/audio/{order.Id}?v={version}", filename);
+    }
+
+    private string GetAudioDomId(MusicOrder order, int version) => $"{order.Id}-{version}";
+
+    private string GetAudioSource(MusicOrder order, int version)
+    {
+        if (order.DownloadConfirmed)
+            return $"/api/audio/{order.Id}?v={version}";
+
+        return $"/api/audio/{order.Id}/preview?v={version}&t={_sessionId}";
     }
 
     private void ToggleLyrics(int orderId)

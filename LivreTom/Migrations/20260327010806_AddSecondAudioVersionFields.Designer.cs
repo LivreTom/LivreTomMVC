@@ -3,6 +3,7 @@ using System;
 using LivreTom.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LivreTom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327010806_AddSecondAudioVersionFields")]
+    partial class AddSecondAudioVersionFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,7 +162,7 @@ namespace LivreTom.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MusicOrders", (string)null);
+                    b.ToTable("MusicOrders");
                 });
 
             modelBuilder.Entity("LivreTom.Models.StepQuestion", b =>
@@ -197,7 +200,7 @@ namespace LivreTom.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StepQuestions", (string)null);
+                    b.ToTable("StepQuestions");
                 });
 
             modelBuilder.Entity("LivreTom.Models.SupportTicket", b =>
@@ -245,7 +248,7 @@ namespace LivreTom.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SupportTickets", (string)null);
+                    b.ToTable("SupportTickets");
                 });
 
             modelBuilder.Entity("LivreTom.Models.UserAnswer", b =>
@@ -271,7 +274,7 @@ namespace LivreTom.Migrations
 
                     b.HasIndex("MusicOrderId");
 
-                    b.ToTable("UserAnswers", (string)null);
+                    b.ToTable("UserAnswers");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using LivreTom.Components.Shared
 @using LivreTom.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -7,6 +7,7 @@
 @inject MusicService MusicService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject AuthenticationStateService AuthService
+@inject IJSRuntime JS
 
 <PageTitle>LivreTom - Produtora e Curadoria Musical Sob Medida</PageTitle>
 
@@ -89,6 +90,10 @@
                                                 </span>
                                             </td>
                                             <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-dark rounded-pill px-3 me-2"
+                                                        @onclick="() => OpenPromptModal(order)">
+                                                    <i class="bi bi-file-earmark-text me-1"></i> Input
+                                                </button>
                                                 @if (order.Status == "Pendente")
                                                 {
                                                     <button class="btn btn-sm btn-vibrant text-white rounded-pill px-3"
@@ -140,29 +145,36 @@
 
                                         <span class="small text-muted">@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
 
-                                        @if (order.Status == "Pendente")
-
-                                        {
-
-                                            <button class="btn btn-sm btn-vibrant text-white rounded-pill px-3"
-                                                    @onclick="() => OpenFulfillModal(order)">
-
-                                                <i class="bi bi-music-note-beamed me-1"></i> Entregar
-
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-dark rounded-pill px-3"
+                                                    @onclick="() => OpenPromptModal(order)">
+                                                <i class="bi bi-file-earmark-text me-1"></i> Input
                                             </button>
 
-                                        }
+                                            @if (order.Status == "Pendente")
 
-                                        else if (!string.IsNullOrEmpty(order.ResolvedAudioUrl))
+                                            {
 
-                                        {
+                                                <button class="btn btn-sm btn-vibrant text-white rounded-pill px-3"
+                                                        @onclick="() => OpenFulfillModal(order)">
 
-                                            <button class="btn btn-sm btn-outline-success rounded-pill px-3"
-                                                    @onclick="() => previewOrder = order">
-                                                <i class="bi bi-play-fill me-1"></i> Ouvir
-                                            </button>
+                                                    <i class="bi bi-music-note-beamed me-1"></i> Entregar
 
-                                        }
+                                                </button>
+
+                                            }
+
+                                            else if (!string.IsNullOrEmpty(order.ResolvedAudioUrl))
+
+                                            {
+
+                                                <button class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                                        @onclick="() => previewOrder = order">
+                                                    <i class="bi bi-play-fill me-1"></i> Ouvir
+                                                </button>
+
+                                            }
+                                        </div>
 
                                     </div>
 
@@ -188,12 +200,18 @@
                                 <div class="modal-body">
                                     <p class="text-muted small mb-3">
                                         <strong>Usuário:</strong> @(selectedOrder.User?.Email ?? selectedOrder.UserId)<br />
-                                        <strong>Pedido:</strong> @selectedOrder.FinalPrompt
+                                        <strong>Pedido:</strong> @(selectedOrder.Title ?? selectedOrder.FinalPrompt ?? "—")
                                     </p>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold small">Link curto do Suno <span class="text-danger">*</span></label>
                                         <input type="url" class="form-control rounded-3" placeholder="https://suno.com/s/..."
                                                @bind="sunoUrl" disabled="@isFulfilling" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Link curto do Suno (versão 2)</label>
+                                        <input type="url" class="form-control rounded-3" placeholder="https://suno.com/s/..."
+                                               @bind="sunoUrlV2" disabled="@isFulfilling" />
+                                        <div class="form-text">Opcional. Se preenchido, o usuário receberá duas versões no mesmo card.</div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold small">Título da música</label>
@@ -219,6 +237,37 @@
                                         }
                                         <i class="bi bi-check-lg me-1"></i> Concluir Entrega
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @* --- MODAL DE INPUT ADMIN --- *@
+                @if (promptOrder is not null)
+                {
+                    <div class="modal-backdrop fade show"></div>
+                    <div class="modal d-block fade show" tabindex="-1" @onclick="ClosePromptModal">
+                        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable" @onclick:stopPropagation="true">
+                            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                                <div class="modal-header border-0 pb-0">
+                                    <div>
+                                        <h5 class="modal-title fw-bold mb-0">Input do Pedido #@promptOrder.Id</h5>
+                                        <p class="small text-muted mb-0">@(promptOrder.User?.Email ?? promptOrder.UserId)</p>
+                                    </div>
+                                    <button type="button" class="btn-close ms-auto" @onclick="ClosePromptModal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label fw-bold small">FinalPrompt</label>
+                                    <textarea class="form-control rounded-3 font-monospace" rows="12" readonly>@(promptOrder.FinalPrompt ?? "Sem input gerado (NULL)")</textarea>
+
+                                    <label class="form-label fw-bold small mt-3">FormData (respostas brutas)</label>
+                                    <textarea class="form-control rounded-3" rows="4" readonly>@(promptOrder.FormData ?? "Sem FormData")</textarea>
+                                </div>
+                                <div class="modal-footer border-0 pt-0">
+                                    <button class="btn btn-dark rounded-pill px-4" @onclick="() => CopyFinalPrompt(promptOrder.FinalPrompt)">
+                                        <i class="bi bi-clipboard me-1"></i> Copiar FinalPrompt
+                                    </button>
+                                    <button class="btn btn-outline-secondary rounded-pill px-4" @onclick="ClosePromptModal">Fechar</button>
                                 </div>
                             </div>
                         </div>
@@ -275,19 +324,33 @@
                                 </div>
 
                                 <div class="modal-body">
+                                    @if (!string.IsNullOrEmpty(previewOrder.ResolvedAudioUrl))
+                                    {
+                                        <div class="p-3 rounded-3 border mb-3">
+                                            <div class="small fw-bold mb-2">Versão 1</div>
+                                            <audio controls preload="none" class="w-100 mb-2" style="border-radius: 12px;">
+                                                <source src="@previewOrder.ResolvedAudioUrl" type="audio/mpeg" />
+                                            </audio>
+                                            <a href="@previewOrder.ResolvedAudioUrl" download="@(previewOrder.Title ?? "musica") - V1.mp3"
+                                               class="btn btn-sm btn-outline-dark rounded-pill w-100">
+                                                <i class="bi bi-download me-1"></i> Baixar MP3 (V1)
+                                            </a>
+                                        </div>
+                                    }
 
-                                    <audio controls preload="none" class="w-100 mb-3" style="border-radius: 12px;">
-
-                                        <source src="@previewOrder.ResolvedAudioUrl" type="audio/mpeg" />
-
-                                    </audio>
-
-                                    <a href="@previewOrder.ResolvedAudioUrl" download="@(previewOrder.Title ?? "musica").mp3"
-                                           class="btn btn-sm btn-outline-dark rounded-pill w-100 mb-3">
-
-                                        <i class="bi bi-download me-1"></i> Baixar MP3
-
-                                    </a>
+                                    @if (!string.IsNullOrEmpty(previewOrder.ResolvedAudioUrlV2))
+                                    {
+                                        <div class="p-3 rounded-3 border bg-light mb-3">
+                                            <div class="small fw-bold mb-2">Versão 2</div>
+                                            <audio controls preload="none" class="w-100 mb-2" style="border-radius: 12px;">
+                                                <source src="@previewOrder.ResolvedAudioUrlV2" type="audio/mpeg" />
+                                            </audio>
+                                            <a href="@previewOrder.ResolvedAudioUrlV2" download="@(previewOrder.Title ?? "musica") - V2.mp3"
+                                               class="btn btn-sm btn-outline-dark rounded-pill w-100">
+                                                <i class="bi bi-download me-1"></i> Baixar MP3 (V2)
+                                            </a>
+                                        </div>
+                                    }
 
                                     @if (!string.IsNullOrEmpty(previewOrder.Lyrics))
 
@@ -331,7 +394,6 @@
 
                     <div class="mt-5 p-5 border-dashed rounded-4 text-center text-muted">
                         <i class="bi bi-music-note-list fs-1 d-block mb-2"></i>
-                        <p>As músicas que produzimos aparecerão na aba <strong>Meus Pedidos</strong>.</p>
                     </div>
                 </div>
             </NotAuthorized>
@@ -372,26 +434,36 @@
                     <p class="mx-auto mb-5 opacity-75" style="max-width: 600px;">Ouça o padrão de qualidade das produções que nossa equipe pode entregar para o seu projeto.</p>
                     <div class="row g-4 justify-content-center">
                         <div class="col-md-4">
-                            <div class="audio-card p-4 shadow-lg text-start border-0">
-                                <span class="badge bg-white text-primary mb-2">Homenagem</span>
-                                <h5 class="fw-bold">Como La Arena</h5>
-                                <audio controls class="w-100 mt-2">
-                                    <source src="https://cdn1.suno.ai/60b69e12-d8f3-4a22-84eb-b91bc4851b9a.mp3" type="audio/mpeg">
-                                </audio>
+                            <div class="audio-card shadow-lg text-start border-0 overflow-hidden h-100 rounded-4">
+                                <div class="p-4">
+                                    <span class="badge bg-white text-info mb-2">Homenagem</span>
+                                    <h5 class="fw-bold">Como La Arena</h5>
+                                    <audio controls class="w-100 mt-2">
+                                        <source src="https://cdn1.suno.ai/60b69e12-d8f3-4a22-84eb-b91bc4851b9a.mp3" type="audio/mpeg">
+                                    </audio>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="audio-card p-4 shadow-lg text-start border-0">
-                                <span class="badge bg-white text-info mb-2">Relaxamento</span>
-                                <h5 class="fw-bold">Deep Meditation Loft</h5>
-                                <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                            <div class="audio-card shadow-lg text-start border-0 overflow-hidden h-100 rounded-4">
+                                <div class="p-4">
+                                    <span class="badge bg-white text-info mb-2">Homenagem</span>
+                                    <h5 class="fw-bold">Como La Arena</h5>
+                                    <audio controls class="w-100 mt-2">
+                                        <source src="https://cdn1.suno.ai/60b69e12-d8f3-4a22-84eb-b91bc4851b9a.mp3" type="audio/mpeg">
+                                    </audio>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="audio-card p-4 shadow-lg text-start border-0">
-                                <span class="badge bg-white text-success mb-2">Games</span>
-                                <h5 class="fw-bold">8-Bit Adventure</h5>
-                                <audio controls class="w-100 mt-2"><source src="#" type="audio/mpeg"></audio>
+                            <div class="audio-card shadow-lg text-start border-0 overflow-hidden h-100 rounded-4">
+                                <div class="p-4">
+                                    <span class="badge bg-white text-info mb-2">Homenagem</span>
+                                    <h5 class="fw-bold">Como La Arena</h5>
+                                    <audio controls class="w-100 mt-2">
+                                        <source src="https://cdn1.suno.ai/60b69e12-d8f3-4a22-84eb-b91bc4851b9a.mp3" type="audio/mpeg">
+                                    </audio>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -427,13 +499,6 @@
                             </div>
                         </div>
                     }
-                </div>
-
-                <div class="marquee-container mt-5 pt-5 overflow-hidden w-100">
-                    <div class="marquee-content d-flex gap-5 align-items-center">
-                        <span>Samba Raiz</span> <span>Lo-fi Hip Hop</span> <span>Cinematic</span> <span>Trap</span> <span>Synthwave</span> <span>Bossa Nova</span>
-                        <span>Samba Raiz</span> <span>Lo-fi Hip Hop</span> <span>Cinematic</span> <span>Trap</span> <span>Synthwave</span> <span>Bossa Nova</span>
-                    </div>
                 </div>
 
                 <div class="final-cta text-center mt-5 pt-4">
@@ -495,12 +560,14 @@
     private string? adminFilter;
     private MusicOrder? selectedOrder;
     private string sunoUrl = "";
+    private string sunoUrlV2 = "";
     private string fulfillTitle = "";
     private string fulfillLyrics = "";
     private bool isFulfilling;
     private string? adminResultMessage;
     private bool adminResultSuccess;
     private MusicOrder? previewOrder;
+    private MusicOrder? promptOrder;
 
     private List<MusicOrder> adminFilteredOrders =>
         adminOrders?.Where(o => adminFilter is null || o.Status == adminFilter).ToList() ?? [];
@@ -526,12 +593,16 @@
     {
         selectedOrder = order;
         sunoUrl = "";
+        sunoUrlV2 = "";
         fulfillTitle = "";
         fulfillLyrics = "";
         adminResultMessage = null;
     }
 
     private void CloseFulfillModal() => selectedOrder = null;
+
+    private void OpenPromptModal(MusicOrder order) => promptOrder = order;
+    private void ClosePromptModal() => promptOrder = null;
 
     private async Task SubmitFulfill()
     {
@@ -541,6 +612,7 @@
         var (success, message) = await MusicService.FulfillOrderAsync(
             selectedOrder.Id,
             sunoUrl.Trim(),
+            string.IsNullOrWhiteSpace(sunoUrlV2) ? null : sunoUrlV2.Trim(),
             string.IsNullOrWhiteSpace(fulfillTitle) ? null : fulfillTitle.Trim(),
             string.IsNullOrWhiteSpace(fulfillLyrics) ? null : fulfillLyrics.Trim()
         );
@@ -589,4 +661,10 @@
         new("📹", "Criadores", "Trilhas originais criadas para seus vídeos."),
         new("🎸", "Personalizado", "Produção de música sob medida para você.")
     ];
+
+    private async Task CopyFinalPrompt(string? finalPrompt)
+    {
+        if (!string.IsNullOrWhiteSpace(finalPrompt))
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", finalPrompt);
+    }
 }

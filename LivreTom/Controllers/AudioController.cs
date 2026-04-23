@@ -11,7 +11,7 @@ namespace LivreTom.Controllers;
 public class AudioController(MusicService musicService, HttpClient httpClient) : Controller
 {
     [HttpGet("{orderId:int}")]
-    public async Task<IActionResult> Stream(int orderId)
+    public async Task<IActionResult> Stream(int orderId, [FromQuery] int v = 1)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
@@ -24,7 +24,7 @@ public class AudioController(MusicService musicService, HttpClient httpClient) :
         if (!order.DownloadConfirmed)
             return Forbid();
 
-        var audioUrl = order.ResolvedAudioUrl;
+        var audioUrl = v == 2 ? order.ResolvedAudioUrlV2 : order.ResolvedAudioUrl;
         if (string.IsNullOrEmpty(audioUrl))
             return NotFound();
 
@@ -43,7 +43,7 @@ public class AudioController(MusicService musicService, HttpClient httpClient) :
     }
 
     [HttpGet("{orderId:int}/preview")]
-    public async Task<IActionResult> Preview(int orderId)
+    public async Task<IActionResult> Preview(int orderId, [FromQuery] int v = 1)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
@@ -53,7 +53,7 @@ public class AudioController(MusicService musicService, HttpClient httpClient) :
         if (order is null || order.UserId != userId)
             return NotFound();
 
-        var audioUrl = order.ResolvedAudioUrl;
+        var audioUrl = v == 2 ? order.ResolvedAudioUrlV2 : order.ResolvedAudioUrl;
         if (string.IsNullOrEmpty(audioUrl))
             return NotFound();
 

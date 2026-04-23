@@ -7,70 +7,640 @@
 
 @if (IsVisible)
 {
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal d-block fade show" tabindex="-1" @onclick="Close">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;" @onclick:stopPropagation="true">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 24px;">
+    <div class="modal-backdrop fade show wizard-backdrop"></div>
+    <div class="modal d-block fade show" tabindex="-1" @onclick="RequestCloseAttempt">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable @(IsSpecialCategory ? "modal-xl" : "") wizard-dialog" @onclick:stopPropagation="true">
+            <div class="modal-content border-0 shadow-lg wizard-shell">
+                <div class="modal-header border-0 wizard-header">
+                    <div class="w-100">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="wizard-kicker">Briefing Musical</div>
+                                <h5 class="modal-title fw-bold mb-1">@SpecialCategoryTitle</h5>
+                                @if (IsSpecialCategory)
+                                {
+                                    <small class="text-white-50">Passo @(SpecialStepIndex + 1) de @SpecialTotalSteps</small>
+                                }
+                                else if (!isLoading && questions.Count > 0)
+                                {
+                                    <small class="text-white-50">Pergunta @(currentQuestionIndex + 1) de @questions.Count</small>
+                                }
+                            </div>
+                            <button type="button" class="btn-close btn-close-white ms-auto" @onclick="RequestCloseAttempt" disabled="@isSubmitting"></button>
+                        </div>
 
-                <div class="modal-header border-0 pb-0">
-                    <button type="button" class="btn-close ms-auto" @onclick="Close" disabled="@isLoading"></button>
+                        @if (IsSpecialCategory)
+                        {
+                            <div class="wizard-progress mt-3">
+                                <div class="wizard-progress-track">
+                                    <div class="wizard-progress-fill" style="width:@(SpecialProgressPercent)%"></div>
+                                </div>
+                                <div class="wizard-progress-label">@SpecialProgressPercent% preenchido</div>
+                            </div>
+                        }
+                    </div>
                 </div>
 
-                <div class="modal-body px-4 px-sm-5 py-4">
+                <div class="modal-body wizard-body">
                     @if (isSuccess)
                     {
-                        <div class="text-center py-3">
-                            <div class="mb-4">
-                                <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-2">Pedido realizado com sucesso!</h5>
-                            <p class="text-muted">Sua música está sendo criada. Você pode acompanhar o status em <strong>Meus Pedidos</strong>.</p>
+                        <div class="text-center py-4">
+                            <h5 class="fw-bold">Pedido realizado com sucesso</h5>
+                            <p class="text-muted mb-0">Sua música entrou na fila de produção.</p>
                         </div>
                     }
                     else if (isLoading)
                     {
-                        <div class="text-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                            <p class="mt-3 text-muted">Carregando formulário...</p>
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-3 text-muted mb-0">Carregando formulário...</p>
                         </div>
                     }
-                    else if (questions == null || questions.Count == 0)
+                    else if (IsHomenagemCategory)
                     {
-                        <div class="alert alert-warning">Nenhuma pergunta encontrada para esta categoria.</div>
+                        @switch (homageStepIndex)
+                        {
+                            case 0:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 1 - Essencia</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Quem estamos homenageando? *</label>
+                                            <input class="form-control" @bind="homageModel.HonoredSubject" placeholder="Ex: Minha esposa Maria" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Qual o sentimento principal? *</label>
+                                            <input class="form-control" @bind="homageModel.MainFeeling" placeholder="Ex: Amor profundo, gratidão, superação..." />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Vibe da música *</label>
+                                            <select class="form-select" @bind="homageModel.HomageTone">
+                                                <option value="">Selecione</option>
+                                                <option value="Feliz">Alegre / Comemorativa</option>
+                                                <option value="Saudosa">Nostálgica / Saudosa</option>
+                                                <option value="Motivadora">Inspiradora / Forte</option>
+                                                <option value="Romantica">Romântica / Intimista</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Pronúncia desejada (opcional)</label>
+                                            <input class="form-control" @bind="homageModel.PronunciationHint" placeholder="Ex: Suenia deve soar como Suênia" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Quer citar o homenageado na letra?</label>
+                                            <select class="form-select" @bind="homageModel.MentionInLyrics">
+                                                <option value="">A IA pode decidir</option>
+                                                <option>Sim</option>
+                                                <option>Nao</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 1:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 2 - A História</div>
+                                    <label class="form-label">Conte memórias, fatos ou momentos marcantes *</label>
+                                    <textarea class="form-control mb-3" rows="5" @bind="homageModel.RealMemory" placeholder="Quanto mais detalhes você der, mais emocionante será a letra..."></textarea>
+                                    <label class="form-label">O que essa pessoa ou esse momento representa pra você?</label>
+                                    <textarea class="form-control mb-3" rows="3" @bind="homageModel.RepresentationMeaning" placeholder="Ex: meu porto seguro, a melhor fase da minha vida, a pessoa que me salvou..."></textarea>
+                                    <label class="form-label">O que você quer dizer para ela(e)? *</label>
+                                    <textarea class="form-control" rows="3" @bind="homageModel.MessageToSay" placeholder="A mensagem central da música..."></textarea>
+                                </div>
+                                break;
+
+                            case 2:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 3 - Estilo Musical</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Título da música *</label>
+                                            <input class="form-control" @bind="homageModel.SongTitle" placeholder="Ex: Nossa História em Canção" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Gênero *</label>
+                                            <input class="form-control" @bind="homageModel.MainStyle" placeholder="Ex: Sertanejo, MPB, Pop..." />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Como deve ser o ritmo? *</label>
+                                            <select class="form-select" @bind="homageModel.Block4Energy">
+                                                <option value="">Selecione</option>
+                                                <option value="Lento">Calmo e suave</option>
+                                                <option value="Medio">Moderado</option>
+                                                <option value="Rapido">Animado e intenso</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Direção da voz *</label>
+                                            <select class="form-select" @bind="homageModel.VoiceDirection">
+                                                <option value="">Selecione</option>
+                                                <option value="Voz Masculina">Masculina</option>
+                                                <option value="Voz Feminina">Feminina</option>
+                                                <option value="Dueto">Dueto</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Idioma da música</label>
+                                            <select class="form-select" @bind="homageModel.SongLanguage">
+                                                <option value="">Seguir contexto da história</option>
+                                                <option value="Português do Brasil">Português do Brasil</option>
+                                                <option value="Espanhol">Espanhol</option>
+                                                <option value="Inglês">Inglês</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Exemplos de músicas (Referências) *</label>
+                                            <input class="form-control" @bind="homageModel.ReferenceSongs" placeholder="Artista - Nome da Música; Artista - Nome da Música" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Clima da música</label>
+                                            <input class="form-control" @bind="homageModel.Climate" placeholder="Ex: acolhedor, cinematográfico, pra cima, intimista..." />
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 3:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 4 - Detalhes Humanos (Opcional)</div>
+                                    <label class="form-label">Nomes, apelidos, gírias, lugares ou detalhes específicos</label>
+                                    <textarea class="form-control mb-3" rows="5" @bind="homageModel.Block7Details" placeholder="Ex: o apelido Pequena, a viagem para Natal, o jeito dela rir..."></textarea>
+                                    <label class="form-label">Frases reais ou jeito de falar</label>
+                                    <textarea class="form-control mb-3" rows="3" @bind="homageModel.Block7RealPhrases" placeholder="Ex: fica com Deus meu bem, meu amorzinho, bora simbora..."></textarea>
+                                    <label class="form-label">Direção extra para a produção</label>
+                                    <textarea class="form-control" rows="3" @bind="homageModel.Block8StyleReferences" placeholder="Ex: mais acústica, mais raiz, mais cinematográfica, menos moderna..."></textarea>
+                                </div>
+                                break;
+
+                            case 4:
+                                <div class="block-card">
+                                    <div class="block-title">Bloco 5 - Direção vocal (Opcional)</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Tipo de vocal</label>
+                                            <select class="form-select" @bind="homageModel.Block5VocalType">
+                                                <option value="">Selecione</option>
+                                                <option>Limpo</option>
+                                                <option>Suave</option>
+                                                <option>Emocional/rasgado</option>
+                                                <option>Falado (spoken)</option>
+                                                <option>Sussurrado</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Formação</label>
+                                            <select class="form-select" @bind="homageModel.Block5Formation">
+                                                <option value="">Selecione</option>
+                                                <option>Solo</option>
+                                                <option>Dueto</option>
+                                                <option>Uníssono</option>
+                                                <option>Alternando vozes</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label">Interpretação</label>
+                                            <select class="form-select" @bind="homageModel.Block5Interpretation">
+                                                <option value="">Selecione</option>
+                                                <option>Intimista</option>
+                                                <option>Explosiva</option>
+                                                <option>Conversacional</option>
+                                                <option>Atmosférica</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 5:
+                                <div class="block-card">
+                                    <div class="block-title">Bloco 6 - Estilo de letra (Opcional)</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Estilo da letra</label>
+                                            <select class="form-select" @bind="homageModel.Block6LyricStyle">
+                                                <option value="">Selecione</option>
+                                                <option>Frases curtas e quebradas</option>
+                                                <option>Conversa (tipo dialogo)</option>
+                                                <option>Narrativa linear</option>
+                                                <option>Poética/abstrata</option>
+                                                <option>Repetitiva (mantra)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Nével de complexidade</label>
+                                            <select class="form-select" @bind="homageModel.Block6Complexity">
+                                                <option value="">Selecione</option>
+                                                <option>Simples</option>
+                                                <option>Médio</option>
+                                                <option>Profundo</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Repetição proposital?</label>
+                                            <select class="form-select" @bind="homageModel.Block6Repetition">
+                                                <option value="">Selecione</option>
+                                                <option>Sim</option>
+                                                <option>Não</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Pausas e espacos?</label>
+                                            <select class="form-select" @bind="homageModel.Block6Pauses">
+                                                <option value="">Selecione</option>
+                                                <option>Sim</option>
+                                                <option>Não</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+                            case 6:
+                                <div class="block-card">
+                                    <div class="block-title">Bloco 7 - Elementos humanos (Opcional, muito forte)</div>
+                                    <label class="form-label">Frases reais que a pessoa fala</label>
+                                    <textarea class="form-control mb-3" rows="2" @bind="homageModel.Block7RealPhrases"></textarea>
+                                    <label class="form-label">Gírias ou jeito de falar</label>
+                                    <textarea class="form-control mb-3" rows="2" @bind="homageModel.Block7Slang"></textarea>
+                                    <label class="form-label">Lugares importantes</label>
+                                    <textarea class="form-control mb-3" rows="2" @bind="homageModel.Block7Places"></textarea>
+                                    <label class="form-label">Objetos simbólicos</label>
+                                    <textarea class="form-control mb-3" rows="2" @bind="homageModel.Block7Objects"></textarea>
+                                    <label class="form-label">Pequenos detalhes únicos</label>
+                                    <textarea class="form-control" rows="2" @bind="homageModel.Block7Details"></textarea>
+                                </div>
+                                break;
+
+                            case 7:
+                                <div class="block-card">
+                                    <div class="block-title">Bloco 8 - Direção artística avançada (PRO)</div>
+                                    <label class="form-label">Referencias de estilo</label>
+                                    <input class="form-control mb-3" @bind="homageModel.Block8StyleReferences" placeholder="Ex: Alternative + Shoegaze + Emo + Lo-fi" />
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Sensação sonora</label>
+                                            <select class="form-select" @bind="homageModel.Block8SoundFeeling">
+                                                <option value="">Selecione</option>
+                                                <option>Crua (raw)</option>
+                                                <option>Polida</option>
+                                                <option>Vintage</option>
+                                                <option>Atmosférica</option>
+                                                <option>Experimental</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Textura sonora</label>
+                                            <select class="form-select" @bind="homageModel.Block8Texture">
+                                                <option value="">Selecione</option>
+                                                <option>Minimalista</option>
+                                                <option>Densa</option>
+                                                <option>Espaçosa</option>
+                                                <option>Lo-fi</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <label class="form-label mt-3">Instrumentos principais (multi-seleção)</label>
+                                    <div class="row g-2 mb-3">
+                                        @foreach (var option in Block8InstrumentOptions)
+                                        {
+                                            <div class="col-6 col-md-4">
+                                                <label class="form-check">
+                                                    <input class="form-check-input" type="checkbox" checked="@block8Instruments.Contains(option)" @onchange="@(_ => ToggleInSet(block8Instruments, option))" />
+                                                    <span class="form-check-label">@option</span>
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                    <label class="form-label">Outro instrumento</label>
+                                    <input class="form-control mb-3" @bind="homageModel.Block8OtherInstrument" />
+                                    <label class="form-label">Dinâmica</label>
+                                    <select class="form-select" @bind="homageModel.Block8Dynamics">
+                                        <option value="">Selecione</option>
+                                        <option>Crescente (build-up)</option>
+                                        <option>Constante</option>
+                                        <option>Explosiva no refrão</option>
+                                        <option>Alternância calma/intensa</option>
+                                    </select>
+                                </div>
+                                break;
+
+                            case 8:
+                                <div class="block-card">
+                                    <div class="block-title">Bloco 9 - Direção cinematográfica (PRO)</div>
+                                    <label class="form-label">Se essa música fosse uma cena, como seria?</label>
+                                    <textarea class="form-control mb-3" rows="4" @bind="homageModel.Block9Scene"></textarea>
+                                    <label class="form-label">Onde ela tocaria?</label>
+                                    <select class="form-select mb-3" @bind="homageModel.Block9WherePlays">
+                                        <option value="">Selecione</option>
+                                        <option>Filme</option>
+                                        <option>TikTok</option>
+                                        <option>Show ao vivo</option>
+                                        <option>Momento íntimo</option>
+                                    </select>
+                                    <label class="form-label">Qual emoção final deve deixar?</label>
+                                    <input class="form-control" @bind="homageModel.Block9FinalEmotion" />
+                                </div>
+                                break;
+                        }
+                    }
+                    else if (IsRelaxamentoCategory)
+                    {
+                        @switch (relaxStepIndex)
+                        {
+                            case 0:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 1 - Objetivo</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Título da faixa *</label>
+                                            <input class="form-control" @bind="relaxModel.TrackTitle" placeholder="Ex: Oceano Interno" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Pra que esse som será usado? *</label>
+                                            <select class="form-select" @bind="relaxModel.PrimaryGoal">
+                                                <option value="">Selecione</option>
+                                                <option>Foco profundo</option>
+                                                <option>Meditacao guiada ou silenciosa</option>
+                                                <option>Relaxamento e desaceleracao</option>
+                                                <option>Sono</option>
+                                                <option>Yoga ou respiracao</option>
+                                                <option>Reducao de ansiedade</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Qual sensação final deve deixar? *</label>
+                                            <input class="form-control" @bind="relaxModel.FinalFeeling" placeholder="Ex: paz, clareza, leveza, aterramento..." />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Como a pessoa deve se sentir nos primeiros minutos? *</label>
+                                            <textarea class="form-control" rows="3" @bind="relaxModel.OpeningMood" placeholder="Ex: desacelerando, respirando fundo, saindo do caos mental..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 1:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 2 - Cena e Uso</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Em que momento ou ambiente esse som vai tocar? *</label>
+                                            <textarea class="form-control" rows="4" @bind="relaxModel.UseScene" placeholder="Ex: escritório silencioso, madrugada, sessão de meditação, quarto escuro, spa..."></textarea>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Duração desejada</label>
+                                            <select class="form-select" @bind="relaxModel.Duration">
+                                                <option value="">A IA pode sugerir</option>
+                                                <option>2 a 3 minutos</option>
+                                                <option>5 minutos</option>
+                                                <option>10 minutos</option>
+                                                <option>15 minutos ou mais</option>
+                                                <option>Loopavel</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Evolução do som</label>
+                                            <select class="form-select" @bind="relaxModel.Progression">
+                                                <option value="">Selecione</option>
+                                                <option>Quase parado e hipnotico</option>
+                                                <option>Crescente bem suave</option>
+                                                <option>Ondulante e organico</option>
+                                                <option>Comeca denso e termina leve</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Existe uma imagem mental ou paisagem para esse som?</label>
+                                            <textarea class="form-control" rows="3" @bind="relaxModel.VisualScene" placeholder="Ex: floresta com neblina, mar calmo ao amanhecer, templo minimalista, cosmos silencioso..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 2:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 3 - Sonoridade</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Base sonora *</label>
+                                            <select class="form-select" @bind="relaxModel.MainStyle">
+                                                <option value="">Selecione</option>
+                                                <option>Ambient</option>
+                                                <option>Meditation</option>
+                                                <option>New Age</option>
+                                                <option>Lo-fi Calm</option>
+                                                <option>Cinematic Ambient</option>
+                                                <option>Nature Soundscape</option>
+                                                <option>Piano Ambient</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Movimento / energia *</label>
+                                            <select class="form-select" @bind="relaxModel.Energy">
+                                                <option value="">Selecione</option>
+                                                <option>Muito lento e profundo</option>
+                                                <option>Leve e flutuante</option>
+                                                <option>Constante para foco</option>
+                                                <option>Suave com pequenas ondas</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Quais elementos sonoros você imagina? *</label>
+                                            <textarea class="form-control" rows="3" @bind="relaxModel.SoundElements" placeholder="Ex: piano macio, pads aereos, chuva leve, bowls, ruido branco suave, agua corrente..."></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Referências de faixa, artista ou canal</label>
+                                            <input class="form-control" @bind="relaxModel.ReferenceTracks" placeholder="Ex: artista - faixa; artista - faixa" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Voz ou sem voz?</label>
+                                            <select class="form-select" @bind="relaxModel.VocalPreference">
+                                                <option value="">Sem preferência</option>
+                                                <option>Instrumental puro</option>
+                                                <option>Com vocal etereo sem palavras</option>
+                                                <option>Com mantra ou vocal sutil</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 3:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 4 - Ajustes Finos (Opcional)</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">O que deve ser evitado nesse som?</label>
+                                            <textarea class="form-control" rows="3" @bind="relaxModel.AvoidElements" placeholder="Ex: nada melancolico, sem batida marcada, sem sintetizador agressivo, sem voces humanas..."></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Detalhes extras importantes</label>
+                                            <textarea class="form-control" rows="4" @bind="relaxModel.ExtraDirection" placeholder="Ex: preciso que funcione bem em loop, quero algo mais quente que frio, menos espacial e mais organico..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+                        }
+                    }
+                    else if (IsCriadoresCategory)
+                    {
+                        @switch (creatorStepIndex)
+                        {
+                            case 0:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 1 - O Video</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Título da trilha *</label>
+                                            <input class="form-control" @bind="creatorModel.TrackTitle" placeholder="Ex: Corrida Contra o Tempo" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Que tipo de vídeo é esse? *</label>
+                                            <select class="form-select" @bind="creatorModel.VideoType">
+                                                <option value="">Selecione</option>
+                                                <option>Vlog</option>
+                                                <option>Cinematic / travel</option>
+                                                <option>Review / tecnologia</option>
+                                                <option>Conteudo motivacional</option>
+                                                <option>Moda / lifestyle</option>
+                                                <option>Gameplay / streaming</option>
+                                                <option>Documental / storytelling</option>
+                                                <option>Publicidade / produto</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Em que plataforma vai tocar mais? *</label>
+                                            <select class="form-select" @bind="creatorModel.Platform">
+                                                <option value="">Selecione</option>
+                                                <option>YouTube</option>
+                                                <option>Instagram Reels</option>
+                                                <option>TikTok</option>
+                                                <option>Podcast em video</option>
+                                                <option>Curso / aula</option>
+                                                <option>Filme curto / portfolio</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">O que está acontecendo no vídeo? *</label>
+                                            <textarea class="form-control" rows="4" @bind="creatorModel.VideoContext" placeholder="Explique a cena, a narrativa ou o tipo de conteúdo..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 1:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 2 - Intencao e Ritmo</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Qual emoção principal a trilha deve passar? *</label>
+                                            <input class="form-control" @bind="creatorModel.MainEmotion" placeholder="Ex: tensão, conquista, curiosidade, elegância..." />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Como deve ser o ritmo da edição? *</label>
+                                            <select class="form-select" @bind="creatorModel.EditPacing">
+                                                <option value="">Selecione</option>
+                                                <option>Lento e contemplativo</option>
+                                                <option>Moderado e fluido</option>
+                                                <option>Rápido e energético</option>
+                                                <option>Oscilante com picos</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Em quais momentos a trilha precisa crescer, segurar ou explodir?</label>
+                                            <textarea class="form-control" rows="4" @bind="creatorModel.KeyMoments" placeholder="Ex: abre suave, cresce no reveal do produto, segura na fala, explode no final..."></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Qual deve ser o efeito da trilha no espectador? *</label>
+                                            <textarea class="form-control" rows="3" @bind="creatorModel.ViewerEffect" placeholder="Ex: prender atenção, valorizar o luxo, dar sensação de avanço, deixar mais épico..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 2:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 3 - Sonoridade</div>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Base musical *</label>
+                                            <input class="form-control" @bind="creatorModel.MainStyle" placeholder="Ex: Trap cinematográfico, Indie eletrônico, Pop motivacional..." />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label">Energia geral *</label>
+                                            <select class="form-select" @bind="creatorModel.Energy">
+                                                <option value="">Selecione</option>
+                                                <option>Baixa</option>
+                                                <option>Média</option>
+                                                <option>Alta</option>
+                                                <option>Crescente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Que elementos você imagina nessa trilha? *</label>
+                                            <textarea class="form-control" rows="3" @bind="creatorModel.SoundElements" placeholder="Ex: sub grave, kick seco, synth pulsante, piano emocional, strings, guitarra texturizada..."></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Referências de músicas, artistas ou trilhas *</label>
+                                            <input class="form-control" @bind="creatorModel.ReferenceTracks" placeholder="Artista - Faixa; Artista - Faixa" />
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Com voz ou instrumental?</label>
+                                            <select class="form-select" @bind="creatorModel.VocalPreference">
+                                                <option value="">Sem preferência</option>
+                                                <option>Instrumental</option>
+                                                <option>Com vocal etéreo</option>
+                                                <option>Com topline marcante</option>
+                                                <option>Com frases curtas</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+
+                            case 3:
+                                <div class="block-card">
+                                    <div class="block-title">Passo 4 - Ajustes Finos (Opcional)</div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">O que deve ser evitado?</label>
+                                            <textarea class="form-control" rows="3" @bind="creatorModel.AvoidElements" placeholder="Ex: nada infantil, sem EDM genérico, sem bateria muito pesada, sem soar triste..."></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Observações extras</label>
+                                            <textarea class="form-control" rows="4" @bind="creatorModel.ExtraDirection" placeholder="Ex: preciso que a trilha respeite locução, quero algo premium, menos agressivo e mais elegante..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                break;
+                        }
+                    }
+                    else if (questions.Count == 0)
+                    {
+                        <div class="alert alert-warning mb-0">Nenhuma pergunta encontrada para esta categoria.</div>
                     }
                     else
                     {
-                        @* Progress indicator *@
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="small fw-bold text-primary">Pergunta @(currentQuestionIndex + 1) de @questions.Count</span>
-                                <span class="small text-muted">@((int)((currentQuestionIndex + 1) * 100 / questions.Count))%</span>
+                        @if (IsPersonalizadoCategory)
+                        {
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Referências sonoras</label>
+                                <input type="text"
+                                       class="form-control rounded-3"
+                                       @bind="customReferenceTracks"
+                                       @bind:event="oninput"
+                                       placeholder="Ex: artista - música; trilha; link; 1, 2 ou mais referências" />
+                                <small class="text-muted">Opcional, mas muito útil. Você pode citar artistas, músicas, trilhas, links ou descrever o clima sonoro que quer aproximar.</small>
                             </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar" role="progressbar" style="width: @((currentQuestionIndex + 1) * 100 / questions.Count)%"></div>
-                            </div>
-                        </div>
 
-                        @* Current question *@
-                        <div class="mb-4">
-                            <p class="fw-semibold mb-3">@currentQuestion.QuestionText</p>
-                            @if (currentQuestion.InputType == "textarea")
+                            <div class="mb-3">
+                                <p class="fw-semibold mb-2">@currentQuestion.QuestionText</p>
+                            </div>
+
+                            @if (currentQuestion.InputType == "select")
                             {
-                                <textarea class="form-control rounded-3" rows="4" 
-                                          @bind="currentAnswer" 
-                                          @bind:event="oninput"
-                                          placeholder="@(currentQuestion.Placeholder ?? "Digite sua resposta aqui...")"
-                                          disabled="@isSubmitting"></textarea>
-                            }
-                            else if (currentQuestion.InputType == "select")
-                            {
-                                <select class="form-control rounded-3" 
-                                        @bind="currentAnswer" 
-                                        disabled="@isSubmitting">
-                                    <option value="">@(currentQuestion.Placeholder ?? "Selecione uma opção...")</option>
-                                    @if (!string.IsNullOrEmpty(currentQuestion.OptionsJson))
+                                <select class="form-select rounded-3" @bind="currentAnswer">
+                                    <option value="">Selecione</option>
+                                    @if (!string.IsNullOrWhiteSpace(currentQuestion.OptionsJson))
                                     {
                                         @foreach (var option in currentQuestion.OptionsJson.Split(','))
                                         {
@@ -81,78 +651,103 @@
                             }
                             else
                             {
-                                <input type="text" class="form-control rounded-3" 
-                                       @bind="currentAnswer" 
-                                       @bind:event="oninput"
-                                       placeholder="@(currentQuestion.Placeholder ?? "Digite sua resposta aqui...")"
-                                       disabled="@isSubmitting" />
+                                <textarea class="form-control rounded-3"
+                                          rows="8"
+                                          style="resize: vertical; min-height: 220px;"
+                                          @bind="currentAnswer"
+                                          @bind:event="oninput"
+                                          placeholder="@(currentQuestion.Placeholder ?? "Descreva com o máximo de clareza o que você quer criar...")"></textarea>
                             }
-                        </div>
-
-                        @if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            <div class="alert alert-danger border-0 rounded-3 mb-3">
-                                <i class="bi bi-exclamation-circle-fill me-2"></i>
-                                @errorMessage
-                            </div>
                         }
+                        else
+                        {
+                            <div class="mb-3">
+                                <p class="fw-semibold mb-2">@currentQuestion.QuestionText</p>
+                            </div>
+                            @if (currentQuestion.InputType == "textarea")
+                            {
+                                <textarea class="form-control rounded-3" rows="4" @bind="currentAnswer" @bind:event="oninput" placeholder="@(currentQuestion.Placeholder ?? "Digite sua resposta aqui...")"></textarea>
+                            }
+                            else if (currentQuestion.InputType == "select")
+                            {
+                                <select class="form-select rounded-3" @bind="currentAnswer">
+                                    <option value="">Selecione</option>
+                                    @if (!string.IsNullOrWhiteSpace(currentQuestion.OptionsJson))
+                                    {
+                                        @foreach (var option in currentQuestion.OptionsJson.Split(','))
+                                        {
+                                            <option value="@option.Trim()">@option.Trim()</option>
+                                        }
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control rounded-3" @bind="currentAnswer" @bind:event="oninput" placeholder="@(currentQuestion.Placeholder ?? "Digite sua resposta aqui...")" />
+                            }
+                        }
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="alert alert-danger border-0 rounded-3 mt-3 mb-0">@errorMessage</div>
                     }
                 </div>
 
-                <div class="modal-footer border-0 px-4 px-sm-5 pb-4 pt-2">
+                <div class="modal-footer border-0 wizard-footer">
                     @if (isSuccess)
                     {
-                        <button type="button" class="btn btn-success rounded-pill px-4 w-100" @onclick="Close">
-                            Ok
-                        </button>
+                        <button type="button" class="btn btn-success rounded-pill px-4 w-100" @onclick="Close">Fechar</button>
                     }
                     else
                     {
                         <div class="d-grid d-sm-flex gap-2 w-100">
-                            <button type="button" class="btn btn-outline-secondary rounded-pill"
-                                    @onclick="Close"
-                                    disabled="@(isLoading || isSubmitting)">
-                                Cancelar
-                            </button>
+                            <button type="button" class="btn btn-outline-secondary rounded-pill" @onclick="RequestCloseAttempt" disabled="@(isLoading || isSubmitting)">Cancelar</button>
 
-                            @if (!isLoading && questions != null && questions.Count > 0)
+                            @if (IsSpecialCategory && SpecialStepIndex > 0)
                             {
-                                @if (currentQuestionIndex > 0)
-                                {
-                                    <button type="button" class="btn btn-outline-primary rounded-pill"
-                                            @onclick="PreviousQuestion"
-                                            disabled="@isSubmitting">
-                                        <i class="bi bi-arrow-left me-1"></i> Voltar
-                                    </button>
-                                }
-
-                                @if (currentQuestionIndex < questions.Count - 1)
-                                {
-                                    <button type="button" class="btn btn-primary rounded-pill ms-sm-auto"
-                                            @onclick="NextQuestion"
-                                            disabled="@(string.IsNullOrWhiteSpace(currentAnswer) || isSubmitting)">
-                                        Próximo
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="btn btn-success rounded-pill ms-sm-auto"
-                                            @onclick="SubmitForm"
-                                            disabled="@(string.IsNullOrWhiteSpace(currentAnswer) || isSubmitting)">
-                                        @if (isSubmitting)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        }
-                                        Realizar Pedido
-                                    </button>
-                                }
+                                <button type="button" class="btn btn-outline-primary rounded-pill" @onclick="PreviousSpecialStep" disabled="@isSubmitting">Voltar</button>
                             }
+                            else if (!IsHomenagemCategory && !isLoading && questions.Count > 0 && currentQuestionIndex > 0)
+                            {
+                                <button type="button" class="btn btn-outline-primary rounded-pill" @onclick="PreviousQuestion" disabled="@isSubmitting">Voltar</button>
+                            }
+
+                            <button type="button" class="btn btn-vibrant text-white rounded-pill ms-sm-auto" @onclick="HandlePrimaryAction" disabled="@(isSubmitting || isLoading)">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                @(IsSpecialCategory ? (SpecialStepIndex == SpecialTotalSteps - 1 ? "Realizar Pedido" : "Próximo passo") : (currentQuestionIndex < questions.Count - 1 ? "Próximo" : "Realizar Pedido"))
+                            </button>
                         </div>
                     }
                 </div>
             </div>
         </div>
     </div>
+
+    @if (showCloseConfirm)
+    {
+        <div class="modal-backdrop fade show" style="z-index: 1060;"></div>
+        <div class="modal d-block fade show" tabindex="-1" style="z-index: 1065;" @onclick="CloseConfirmDialog">
+            <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+                <div class="modal-content border-0 shadow-lg" style="border-radius:18px;">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Descartar preenchimento?</h5>
+                        <button type="button" class="btn-close" @onclick="CloseConfirmDialog"></button>
+                    </div>
+                    <div class="modal-body pt-2">
+                        <p class="text-muted mb-0">Se você sair agora, as informações preenchidas serão perdidas.</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseConfirmDialog">Continuar editando</button>
+                        <button type="button" class="btn btn-danger rounded-pill px-4" @onclick="ConfirmDiscardAndClose">Sair e descartar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -160,41 +755,95 @@
     [Parameter] public string Category { get; set; } = string.Empty;
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private List<StepQuestion> questions = new();
-    private int currentQuestionIndex = 0;
-    private string currentAnswer = string.Empty;
-    private Dictionary<int, string> answers = new();
-    private bool isLoading = true;
-    private bool isSubmitting = false;
-    private bool isSuccess = false;
-    private string errorMessage = string.Empty;
-    private string _loadedCategory = string.Empty;
+    private readonly List<string> Block4StyleOptions =
+    [
+        "Alternative", "Indie", "Lo-fi", "Shoegaze", "Garage Rock", "Emo", "Post-Punk", "Dream Pop",
+        "Neo Psychedelic", "Acoustic", "Industrial", "Power Pop", "Chill", "Aggressive", "Mellow",
+        "Minimal", "Igual aos exemplos fornecidos"
+    ];
 
-    private StepQuestion currentQuestion => questions.Count > 0 ? questions[currentQuestionIndex] : null;
+    private readonly List<string> Block8InstrumentOptions =
+    [
+        "Violao", "Guitarra distorcida", "Synth", "Piano"
+    ];
+
+    private readonly HashSet<string> block4Styles = [];
+    private readonly HashSet<string> block8Instruments = [];
+
+    private const int HomageTotalSteps = 4;
+    private const int RelaxTotalSteps = 4;
+    private const int CreatorTotalSteps = 4;
+    private int homageStepIndex;
+    private int relaxStepIndex;
+    private int creatorStepIndex;
+    private int HomageProgressPercent => (int)Math.Round(((homageStepIndex + 1) / (double)HomageTotalSteps) * 100);
+    private int RelaxProgressPercent => (int)Math.Round(((relaxStepIndex + 1) / (double)RelaxTotalSteps) * 100);
+    private int CreatorProgressPercent => (int)Math.Round(((creatorStepIndex + 1) / (double)CreatorTotalSteps) * 100);
+
+    private List<StepQuestion> questions = [];
+    private int currentQuestionIndex;
+    private string currentAnswer = string.Empty;
+    private readonly Dictionary<int, string> answers = [];
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool isSuccess;
+    private bool showCloseConfirm;
+    private string errorMessage = string.Empty;
+    private string loadedCategory = string.Empty;
+    private string customReferenceTracks = string.Empty;
+    private HomageFormModel homageModel = new();
+    private RelaxFormModel relaxModel = new();
+    private CreatorFormModel creatorModel = new();
+    private StepQuestion currentQuestion => questions.Count > 0 ? questions[currentQuestionIndex] : new StepQuestion();
+    private bool IsHomenagemCategory => string.Equals(Category, "1", StringComparison.OrdinalIgnoreCase) || Category.Contains("homen", StringComparison.OrdinalIgnoreCase);
+    private bool IsRelaxamentoCategory => string.Equals(Category, "2", StringComparison.OrdinalIgnoreCase) || Category.Contains("relax", StringComparison.OrdinalIgnoreCase);
+    private bool IsCriadoresCategory => string.Equals(Category, "3", StringComparison.OrdinalIgnoreCase) || Category.Contains("criador", StringComparison.OrdinalIgnoreCase);
+    private bool IsPersonalizadoCategory => string.Equals(Category, "4", StringComparison.OrdinalIgnoreCase) || Category.Contains("personal", StringComparison.OrdinalIgnoreCase);
+    private bool IsSpecialCategory => IsHomenagemCategory || IsRelaxamentoCategory || IsCriadoresCategory;
+    private int SpecialStepIndex => IsHomenagemCategory ? homageStepIndex : IsRelaxamentoCategory ? relaxStepIndex : creatorStepIndex;
+    private int SpecialTotalSteps => IsHomenagemCategory ? HomageTotalSteps : IsRelaxamentoCategory ? RelaxTotalSteps : CreatorTotalSteps;
+    private int SpecialProgressPercent => IsHomenagemCategory ? HomageProgressPercent : IsRelaxamentoCategory ? RelaxProgressPercent : CreatorProgressPercent;
+    private string SpecialCategoryTitle => IsHomenagemCategory
+        ? "Homenagem personalizada"
+        : IsRelaxamentoCategory
+            ? "Relaxamento e meditacao"
+            : IsCriadoresCategory
+                ? "Criadores e trilhas para video"
+                : IsPersonalizadoCategory
+                    ? "Personalizado"
+                    : "Criacao musical";
 
     protected override async Task OnParametersSetAsync()
     {
-        if (IsVisible && _loadedCategory != Category)
+        if (!IsVisible || loadedCategory == Category)
         {
-            await LoadQuestionsAsync();
+            return;
         }
+
+        ResetForm();
+        loadedCategory = Category;
+
+        if (IsSpecialCategory)
+        {
+            isLoading = false;
+            return;
+        }
+
+        await LoadQuestionsAsync();
     }
 
     private async Task LoadQuestionsAsync()
     {
+
         try
         {
             isLoading = true;
-            errorMessage = string.Empty;
             questions = await QuestionService.GetQuestionsByCategoryAsync(Category);
-            _loadedCategory = Category;
-            currentQuestionIndex = 0;
-            currentAnswer = string.Empty;
-            answers.Clear();
         }
-        catch (Exception ex)
+        catch
         {
-            errorMessage = "Erro ao carregar o formulário. Tente novamente.";
+            errorMessage = "Erro ao carregar o formulário.";
+            questions = [];
         }
         finally
         {
@@ -202,62 +851,217 @@
         }
     }
 
-    private void NextQuestion()
+    private void ToggleInSet(HashSet<string> set, string option)
     {
-        if (!string.IsNullOrWhiteSpace(currentAnswer))
+        if (!set.Add(option))
         {
-            answers[currentQuestionIndex] = currentAnswer;
-            currentAnswer = answers.ContainsKey(currentQuestionIndex + 1) ? answers[currentQuestionIndex + 1] : string.Empty;
-            currentQuestionIndex++;
+            set.Remove(option);
+        }
+    }
+
+    private void PreviousSpecialStep()
+    {
+        if (IsHomenagemCategory && homageStepIndex > 0)
+        {
+            homageStepIndex--;
+            errorMessage = string.Empty;
+        }
+        else if (IsRelaxamentoCategory && relaxStepIndex > 0)
+        {
+            relaxStepIndex--;
+            errorMessage = string.Empty;
+        }
+        else if (IsCriadoresCategory && creatorStepIndex > 0)
+        {
+            creatorStepIndex--;
             errorMessage = string.Empty;
         }
     }
 
-    private void PreviousQuestion()
+    private async Task HandlePrimaryAction()
     {
-        if (currentQuestionIndex > 0)
+        if (IsSpecialCategory)
         {
-            answers[currentQuestionIndex] = currentAnswer;
-            currentQuestionIndex--;
-            currentAnswer = answers.ContainsKey(currentQuestionIndex) ? answers[currentQuestionIndex] : string.Empty;
-            errorMessage = string.Empty;
+            if (!ValidateCurrentSpecialStep(out var stepError))
+            {
+                errorMessage = stepError;
+                return;
+            }
+
+            if (SpecialStepIndex < SpecialTotalSteps - 1)
+            {
+                if (IsHomenagemCategory)
+                {
+                    homageStepIndex++;
+                }
+                else if (IsRelaxamentoCategory)
+                {
+                    relaxStepIndex++;
+                }
+                else
+                {
+                    creatorStepIndex++;
+                }
+
+                errorMessage = string.Empty;
+                return;
+            }
         }
+        else if (currentQuestionIndex < questions.Count - 1)
+        {
+            NextQuestion();
+            return;
+        }
+
+        await SubmitForm();
+    }
+
+    private bool ValidateCurrentSpecialStep(out string message)
+    {
+        message = string.Empty;
+
+        if (IsHomenagemCategory && homageStepIndex == 0)
+        {
+            if (string.IsNullOrWhiteSpace(homageModel.HonoredSubject) ||
+                string.IsNullOrWhiteSpace(homageModel.MainFeeling) ||
+                string.IsNullOrWhiteSpace(homageModel.HomageTone))
+            {
+                message = "Preencha os campos obrigatórios do Passo 1.";
+                return false;
+            }
+        }
+        else if (IsHomenagemCategory && homageStepIndex == 1)
+        {
+            if (string.IsNullOrWhiteSpace(homageModel.RealMemory) ||
+                string.IsNullOrWhiteSpace(homageModel.MessageToSay))
+            {
+                message = "Preencha os campos obrigatórios do Passo 2.";
+                return false;
+            }
+        }
+        else if (IsHomenagemCategory && homageStepIndex == 2)
+        {
+            if (string.IsNullOrWhiteSpace(homageModel.MainStyle) ||
+                string.IsNullOrWhiteSpace(homageModel.SongTitle) ||
+                string.IsNullOrWhiteSpace(homageModel.VoiceDirection) ||
+                string.IsNullOrWhiteSpace(homageModel.Block4Energy) ||
+                string.IsNullOrWhiteSpace(homageModel.ReferenceSongs))
+            {
+                message = "Preencha os campos obrigatórios do Passo 3.";
+                return false;
+            }
+        }
+        else if (IsRelaxamentoCategory && relaxStepIndex == 0)
+        {
+            if (string.IsNullOrWhiteSpace(relaxModel.TrackTitle) ||
+                string.IsNullOrWhiteSpace(relaxModel.PrimaryGoal) ||
+                string.IsNullOrWhiteSpace(relaxModel.FinalFeeling) ||
+                string.IsNullOrWhiteSpace(relaxModel.OpeningMood))
+            {
+                message = "Preencha os campos obrigatórios do Passo 1.";
+                return false;
+            }
+        }
+        else if (IsRelaxamentoCategory && relaxStepIndex == 1)
+        {
+            if (string.IsNullOrWhiteSpace(relaxModel.UseScene) ||
+                string.IsNullOrWhiteSpace(relaxModel.Progression))
+            {
+                message = "Preencha os campos obrigatórios do Passo 2.";
+                return false;
+            }
+        }
+        else if (IsRelaxamentoCategory && relaxStepIndex == 2)
+        {
+            if (string.IsNullOrWhiteSpace(relaxModel.MainStyle) ||
+                string.IsNullOrWhiteSpace(relaxModel.Energy) ||
+                string.IsNullOrWhiteSpace(relaxModel.SoundElements))
+            {
+                message = "Preencha os campos obrigatórios do Passo 3.";
+                return false;
+            }
+        }
+
+        else if (IsCriadoresCategory && creatorStepIndex == 0)
+        {
+            if (string.IsNullOrWhiteSpace(creatorModel.TrackTitle) ||
+                string.IsNullOrWhiteSpace(creatorModel.VideoType) ||
+                string.IsNullOrWhiteSpace(creatorModel.Platform) ||
+                string.IsNullOrWhiteSpace(creatorModel.VideoContext))
+            {
+                message = "Preencha os campos obrigatorios do Passo 1.";
+                return false;
+            }
+        }
+        else if (IsCriadoresCategory && creatorStepIndex == 1)
+        {
+            if (string.IsNullOrWhiteSpace(creatorModel.MainEmotion) ||
+                string.IsNullOrWhiteSpace(creatorModel.EditPacing) ||
+                string.IsNullOrWhiteSpace(creatorModel.KeyMoments) ||
+                string.IsNullOrWhiteSpace(creatorModel.ViewerEffect))
+            {
+                message = "Preencha os campos obrigatorios do Passo 2.";
+                return false;
+            }
+        }
+        else if (IsCriadoresCategory && creatorStepIndex == 2)
+        {
+            if (string.IsNullOrWhiteSpace(creatorModel.MainStyle) ||
+                string.IsNullOrWhiteSpace(creatorModel.Energy) ||
+                string.IsNullOrWhiteSpace(creatorModel.SoundElements) ||
+                string.IsNullOrWhiteSpace(creatorModel.ReferenceTracks) ||
+                string.IsNullOrWhiteSpace(creatorModel.VocalPreference))
+            {
+                message = "Preencha os campos obrigatorios do Passo 3.";
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task SubmitForm()
     {
-        if (string.IsNullOrWhiteSpace(currentAnswer))
+        errorMessage = string.Empty;
+
+        if (!IsSpecialCategory && string.IsNullOrWhiteSpace(currentAnswer))
         {
-            errorMessage = "Por favor, responda a última pergunta antes de enviar.";
+            errorMessage = "Preencha a resposta atual.";
+            return;
+        }
+
+        if (IsHomenagemCategory && !ValidateAllRequiredHomage())
+        {
+            errorMessage = "Revise os passos 1, 2 e 3. Ainda existem campos obrigatórios sem preenchimento.";
+            return;
+        }
+
+        if (IsRelaxamentoCategory && !ValidateAllRequiredRelax())
+        {
+            errorMessage = "Revise os passos 1, 2 e 3. Ainda existem campos obrigatórios sem preenchimento.";
             return;
         }
 
         try
         {
             isSubmitting = true;
-            answers[currentQuestionIndex] = currentAnswer;
 
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
+            if (string.IsNullOrWhiteSpace(userId))
             {
                 errorMessage = "Usuário não autenticado.";
                 return;
             }
 
-            // Montar lista de respostas ordenadas por índice da pergunta
-            var userAnswers = new List<KeyValuePair<string, string>>();
-            for (int i = 0; i < questions.Count; i++)
-            {
-                if (answers.ContainsKey(i))
-                {
-                    userAnswers.Add(new KeyValuePair<string, string>(questions[i].SystemKey, answers[i]));
-                }
-            }
-
-            var (success, message) = await MusicService.CreateOrderAsync(userId, Category, userAnswers);
-
+            var answersToSend = IsHomenagemCategory
+                ? BuildHomageAnswers()
+                : IsRelaxamentoCategory
+                    ? BuildRelaxAnswers()
+                    : IsCriadoresCategory
+                        ? BuildCreatorAnswers()
+                        : BuildDefaultAnswers();
+            var (success, message) = await MusicService.CreateOrderAsync(userId, Category, answersToSend);
             if (success)
             {
                 isSuccess = true;
@@ -267,9 +1071,9 @@
                 errorMessage = message;
             }
         }
-        catch (Exception ex)
+        catch
         {
-            errorMessage = "Erro ao enviar o formulário. Tente novamente.";
+            errorMessage = "Erro ao enviar o formulário.";
         }
         finally
         {
@@ -277,19 +1081,448 @@
         }
     }
 
+    private bool ValidateAllRequiredHomage()
+    {
+        return !string.IsNullOrWhiteSpace(homageModel.HonoredSubject)
+            && !string.IsNullOrWhiteSpace(homageModel.MainFeeling)
+            && !string.IsNullOrWhiteSpace(homageModel.HomageTone)
+            && !string.IsNullOrWhiteSpace(homageModel.RealMemory)
+            && !string.IsNullOrWhiteSpace(homageModel.MessageToSay)
+            && !string.IsNullOrWhiteSpace(homageModel.SongTitle)
+            && !string.IsNullOrWhiteSpace(homageModel.MainStyle)
+            && !string.IsNullOrWhiteSpace(homageModel.VoiceDirection)
+            && !string.IsNullOrWhiteSpace(homageModel.Block4Energy)
+            && !string.IsNullOrWhiteSpace(homageModel.ReferenceSongs);
+    }
+
+    private bool ValidateAllRequiredRelax()
+    {
+        return !string.IsNullOrWhiteSpace(relaxModel.TrackTitle)
+            && !string.IsNullOrWhiteSpace(relaxModel.PrimaryGoal)
+            && !string.IsNullOrWhiteSpace(relaxModel.FinalFeeling)
+            && !string.IsNullOrWhiteSpace(relaxModel.OpeningMood)
+            && !string.IsNullOrWhiteSpace(relaxModel.UseScene)
+            && !string.IsNullOrWhiteSpace(relaxModel.Progression)
+            && !string.IsNullOrWhiteSpace(relaxModel.MainStyle)
+            && !string.IsNullOrWhiteSpace(relaxModel.Energy)
+            && !string.IsNullOrWhiteSpace(relaxModel.SoundElements);
+    }
+
+    private bool ValidateAllRequiredCreator()
+    {
+        return !string.IsNullOrWhiteSpace(creatorModel.TrackTitle)
+            && !string.IsNullOrWhiteSpace(creatorModel.VideoType)
+            && !string.IsNullOrWhiteSpace(creatorModel.Platform)
+            && !string.IsNullOrWhiteSpace(creatorModel.VideoContext)
+            && !string.IsNullOrWhiteSpace(creatorModel.MainEmotion)
+            && !string.IsNullOrWhiteSpace(creatorModel.EditPacing)
+            && !string.IsNullOrWhiteSpace(creatorModel.KeyMoments)
+            && !string.IsNullOrWhiteSpace(creatorModel.ViewerEffect)
+            && !string.IsNullOrWhiteSpace(creatorModel.MainStyle)
+            && !string.IsNullOrWhiteSpace(creatorModel.Energy)
+            && !string.IsNullOrWhiteSpace(creatorModel.SoundElements)
+            && !string.IsNullOrWhiteSpace(creatorModel.ReferenceTracks)
+            && !string.IsNullOrWhiteSpace(creatorModel.VocalPreference);
+    }
+
+    private List<KeyValuePair<string, string>> BuildDefaultAnswers()
+    {
+        answers[currentQuestionIndex] = currentAnswer;
+        var result = new List<KeyValuePair<string, string>>();
+        for (var i = 0; i < questions.Count; i++)
+        {
+            if (answers.TryGetValue(i, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                result.Add(new(questions[i].SystemKey, value));
+            }
+        }
+
+        if (IsPersonalizadoCategory && !string.IsNullOrWhiteSpace(customReferenceTracks))
+        {
+            result.Add(new("personalizado_referencias_sonoras", customReferenceTracks.Trim()));
+        }
+
+        return result;
+    }
+
+    private List<KeyValuePair<string, string>> BuildHomageAnswers()
+    {
+        var list = new List<KeyValuePair<string, string>>();
+        void Add(string key, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                list.Add(new(key, value.Trim()));
+            }
+        }
+
+        var inferredRelationship = string.IsNullOrWhiteSpace(homageModel.Relationship)
+            ? "Inferir pela historia e pelos detalhes fornecidos"
+            : homageModel.Relationship;
+
+        var mentionDecision = string.IsNullOrWhiteSpace(homageModel.MentionInLyrics)
+            ? "A IA pode decidir de acordo com o impacto emocional"
+            : homageModel.MentionInLyrics;
+
+        var inferredClimate = string.IsNullOrWhiteSpace(homageModel.Climate)
+            ? $"Inferir com base no genero {homageModel.MainStyle} e nas referencias informadas"
+            : homageModel.Climate;
+
+        var inferredLanguage = string.IsNullOrWhiteSpace(homageModel.SongLanguage)
+            ? "Inferir pelo contexto emocional e cultural da historia"
+            : homageModel.SongLanguage;
+
+        Add("bloco1_homenageado", homageModel.HonoredSubject);
+        Add("bloco1_pronuncia", homageModel.PronunciationHint);
+        Add("bloco1_relacao", inferredRelationship);
+        Add("bloco1_citar_na_letra", mentionDecision);
+        Add("bloco1_sentimento_principal", homageModel.MainFeeling);
+        Add("bloco1_tipo_homenagem", homageModel.HomageTone);
+
+        Add("bloco2_historia_real", homageModel.RealMemory);
+        Add("bloco2_representa_pra_voce", homageModel.RepresentationMeaning);
+        Add("bloco2_mensagem_desejada", homageModel.MessageToSay);
+
+        Add("titulo_musica", homageModel.SongTitle);
+        Add("bloco3_estilo_principal", homageModel.MainStyle);
+        Add("bloco3_clima", inferredClimate);
+        Add("bloco3_voz", homageModel.VoiceDirection);
+        Add("bloco3_idioma", inferredLanguage);
+        Add("bloco3_musicas_referencia", homageModel.ReferenceSongs);
+
+        Add("bloco4_estilos_adicionais", "Inferir com base nas referencias e na direcao extra");
+        Add("bloco4_energia", homageModel.Block4Energy);
+        Add("bloco4_harmonia", "Inferir a complexidade harmonica a partir das referencias");
+
+        Add("bloco7_frases_reais", homageModel.Block7RealPhrases);
+        Add("bloco7_detalhes_unicos", homageModel.Block7Details);
+
+        Add("bloco8_referencias_estilo", homageModel.Block8StyleReferences);
+        Add("bloco8_sensacao_sonora", "Inferir pelas referencias e pela vibe principal");
+        Add("bloco8_textura_sonora", "Inferir pelas referencias e pela instrumentacao ideal");
+        Add("bloco8_instrumentos", "Inferir pelos exemplos fornecidos");
+        Add("bloco8_dinamica", "Inferir pela emocao dominante e pelo ritmo escolhido");
+
+        return list;
+    }
+
+    private List<KeyValuePair<string, string>> BuildRelaxAnswers()
+    {
+        var list = new List<KeyValuePair<string, string>>();
+
+        void Add(string key, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                list.Add(new(key, value.Trim()));
+            }
+        }
+
+        Add("titulo_musica", relaxModel.TrackTitle);
+        Add("relax_objetivo_principal", relaxModel.PrimaryGoal);
+        Add("relax_emocao_final", relaxModel.FinalFeeling);
+        Add("relax_estado_inicial", relaxModel.OpeningMood);
+        Add("relax_cena_uso", relaxModel.UseScene);
+        Add("relax_duracao", relaxModel.Duration);
+        Add("relax_progressao", relaxModel.Progression);
+        Add("relax_cena_visual", relaxModel.VisualScene);
+        Add("relax_estilo_principal", relaxModel.MainStyle);
+        Add("relax_energia", relaxModel.Energy);
+        Add("relax_elementos_sonoros", relaxModel.SoundElements);
+        Add("relax_referencias", relaxModel.ReferenceTracks);
+        Add("relax_preferencia_vocal", relaxModel.VocalPreference);
+        Add("relax_evitar", relaxModel.AvoidElements);
+        Add("relax_direcao_extra", relaxModel.ExtraDirection);
+
+        return list;
+    }
+
+    private List<KeyValuePair<string, string>> BuildCreatorAnswers()
+    {
+        var list = new List<KeyValuePair<string, string>>();
+
+        void Add(string key, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                list.Add(new(key, value.Trim()));
+            }
+        }
+
+        Add("titulo_musica", creatorModel.TrackTitle);
+        Add("creator_tipo_video", creatorModel.VideoType);
+        Add("creator_plataforma", creatorModel.Platform);
+        Add("creator_contexto_video", creatorModel.VideoContext);
+        Add("creator_emocao_principal", creatorModel.MainEmotion);
+        Add("creator_ritmo_edicao", creatorModel.EditPacing);
+        Add("creator_momentos_chave", creatorModel.KeyMoments);
+        Add("creator_efeito_espectador", creatorModel.ViewerEffect);
+        Add("creator_estilo_principal", creatorModel.MainStyle);
+        Add("creator_energia", creatorModel.Energy);
+        Add("creator_elementos_sonoros", creatorModel.SoundElements);
+        Add("creator_referencias", creatorModel.ReferenceTracks);
+        Add("creator_preferencia_vocal", creatorModel.VocalPreference);
+        Add("creator_evitar", creatorModel.AvoidElements);
+        Add("creator_direcao_extra", creatorModel.ExtraDirection);
+
+        return list;
+    }
+
+    private void NextQuestion()
+    {
+        if (string.IsNullOrWhiteSpace(currentAnswer) || currentQuestionIndex >= questions.Count - 1)
+        {
+            return;
+        }
+
+        answers[currentQuestionIndex] = currentAnswer;
+        currentQuestionIndex++;
+        currentAnswer = answers.TryGetValue(currentQuestionIndex, out var saved) ? saved : string.Empty;
+    }
+
+    private void PreviousQuestion()
+    {
+        if (currentQuestionIndex <= 0)
+        {
+            return;
+        }
+
+        answers[currentQuestionIndex] = currentAnswer;
+        currentQuestionIndex--;
+        currentAnswer = answers.TryGetValue(currentQuestionIndex, out var saved) ? saved : string.Empty;
+    }
+
     private void ResetForm()
     {
         isSuccess = false;
-        currentAnswer = string.Empty;
-        answers.Clear();
-        currentQuestionIndex = 0;
+        isSubmitting = false;
+        isLoading = true;
         errorMessage = string.Empty;
+        currentQuestionIndex = 0;
+        currentAnswer = string.Empty;
+        homageStepIndex = 0;
+        relaxStepIndex = 0;
+        creatorStepIndex = 0;
+        customReferenceTracks = string.Empty;
+        questions = [];
+        answers.Clear();
+        block4Styles.Clear();
+        block8Instruments.Clear();
+        homageModel = new HomageFormModel();
+        relaxModel = new RelaxFormModel();
+        creatorModel = new CreatorFormModel();
+        showCloseConfirm = false;
     }
 
     private async Task Close()
     {
         ResetForm();
+        loadedCategory = string.Empty;
         await OnClose.InvokeAsync();
     }
 
+    private async Task RequestCloseAttempt()
+    {
+        if (isSubmitting)
+        {
+            return;
+        }
+
+        if (isSuccess || !HasUnsavedChanges())
+        {
+            await Close();
+            return;
+        }
+
+        showCloseConfirm = true;
+    }
+
+    private void CloseConfirmDialog()
+    {
+        showCloseConfirm = false;
+    }
+
+    private async Task ConfirmDiscardAndClose()
+    {
+        showCloseConfirm = false;
+        await Close();
+    }
+
+    private bool HasUnsavedChanges()
+    {
+        if (IsHomenagemCategory)
+        {
+            return homageStepIndex > 0
+                || block4Styles.Count > 0
+                || block8Instruments.Count > 0
+                || !string.IsNullOrWhiteSpace(homageModel.HonoredSubject)
+                || !string.IsNullOrWhiteSpace(homageModel.PronunciationHint)
+                || !string.IsNullOrWhiteSpace(homageModel.Relationship)
+                || !string.IsNullOrWhiteSpace(homageModel.MentionInLyrics)
+                || !string.IsNullOrWhiteSpace(homageModel.MainFeeling)
+                || !string.IsNullOrWhiteSpace(homageModel.HomageTone)
+                || !string.IsNullOrWhiteSpace(homageModel.RealMemory)
+                || !string.IsNullOrWhiteSpace(homageModel.RepresentationMeaning)
+                || !string.IsNullOrWhiteSpace(homageModel.MessageToSay)
+                || !string.IsNullOrWhiteSpace(homageModel.SongTitle)
+                || !string.IsNullOrWhiteSpace(homageModel.MainStyle)
+                || !string.IsNullOrWhiteSpace(homageModel.Climate)
+                || !string.IsNullOrWhiteSpace(homageModel.VoiceDirection)
+                || !string.IsNullOrWhiteSpace(homageModel.SongLanguage)
+                || !string.IsNullOrWhiteSpace(homageModel.ReferenceSongs)
+                || !string.IsNullOrWhiteSpace(homageModel.Block4OtherStyle)
+                || !string.IsNullOrWhiteSpace(homageModel.Block4Energy)
+                || !string.IsNullOrWhiteSpace(homageModel.Block4BpmMode)
+                || !string.IsNullOrWhiteSpace(homageModel.Block4BpmSpecific)
+                || !string.IsNullOrWhiteSpace(homageModel.Block4Harmonic)
+                || !string.IsNullOrWhiteSpace(homageModel.Block5VocalType)
+                || !string.IsNullOrWhiteSpace(homageModel.Block5Formation)
+                || !string.IsNullOrWhiteSpace(homageModel.Block5Interpretation)
+                || !string.IsNullOrWhiteSpace(homageModel.Block6LyricStyle)
+                || !string.IsNullOrWhiteSpace(homageModel.Block6Complexity)
+                || !string.IsNullOrWhiteSpace(homageModel.Block6Repetition)
+                || !string.IsNullOrWhiteSpace(homageModel.Block6Pauses)
+                || !string.IsNullOrWhiteSpace(homageModel.Block7RealPhrases)
+                || !string.IsNullOrWhiteSpace(homageModel.Block7Slang)
+                || !string.IsNullOrWhiteSpace(homageModel.Block7Places)
+                || !string.IsNullOrWhiteSpace(homageModel.Block7Objects)
+                || !string.IsNullOrWhiteSpace(homageModel.Block7Details)
+                || !string.IsNullOrWhiteSpace(homageModel.Block8StyleReferences)
+                || !string.IsNullOrWhiteSpace(homageModel.Block8SoundFeeling)
+                || !string.IsNullOrWhiteSpace(homageModel.Block8Texture)
+                || !string.IsNullOrWhiteSpace(homageModel.Block8OtherInstrument)
+                || !string.IsNullOrWhiteSpace(homageModel.Block8Dynamics)
+                || !string.IsNullOrWhiteSpace(homageModel.Block9Scene)
+                || !string.IsNullOrWhiteSpace(homageModel.Block9WherePlays)
+                || !string.IsNullOrWhiteSpace(homageModel.Block9FinalEmotion);
+        }
+
+        if (IsRelaxamentoCategory)
+        {
+            return relaxStepIndex > 0
+                || !string.IsNullOrWhiteSpace(relaxModel.TrackTitle)
+                || !string.IsNullOrWhiteSpace(relaxModel.PrimaryGoal)
+                || !string.IsNullOrWhiteSpace(relaxModel.FinalFeeling)
+                || !string.IsNullOrWhiteSpace(relaxModel.OpeningMood)
+                || !string.IsNullOrWhiteSpace(relaxModel.UseScene)
+                || !string.IsNullOrWhiteSpace(relaxModel.Duration)
+                || !string.IsNullOrWhiteSpace(relaxModel.Progression)
+                || !string.IsNullOrWhiteSpace(relaxModel.VisualScene)
+                || !string.IsNullOrWhiteSpace(relaxModel.MainStyle)
+                || !string.IsNullOrWhiteSpace(relaxModel.Energy)
+                || !string.IsNullOrWhiteSpace(relaxModel.SoundElements)
+                || !string.IsNullOrWhiteSpace(relaxModel.ReferenceTracks)
+                || !string.IsNullOrWhiteSpace(relaxModel.VocalPreference)
+                || !string.IsNullOrWhiteSpace(relaxModel.AvoidElements)
+                || !string.IsNullOrWhiteSpace(relaxModel.ExtraDirection);
+        }
+
+        if (IsCriadoresCategory)
+        {
+            return creatorStepIndex > 0
+                || !string.IsNullOrWhiteSpace(creatorModel.TrackTitle)
+                || !string.IsNullOrWhiteSpace(creatorModel.VideoType)
+                || !string.IsNullOrWhiteSpace(creatorModel.Platform)
+                || !string.IsNullOrWhiteSpace(creatorModel.VideoContext)
+                || !string.IsNullOrWhiteSpace(creatorModel.MainEmotion)
+                || !string.IsNullOrWhiteSpace(creatorModel.EditPacing)
+                || !string.IsNullOrWhiteSpace(creatorModel.KeyMoments)
+                || !string.IsNullOrWhiteSpace(creatorModel.ViewerEffect)
+                || !string.IsNullOrWhiteSpace(creatorModel.MainStyle)
+                || !string.IsNullOrWhiteSpace(creatorModel.Energy)
+                || !string.IsNullOrWhiteSpace(creatorModel.SoundElements)
+                || !string.IsNullOrWhiteSpace(creatorModel.ReferenceTracks)
+                || !string.IsNullOrWhiteSpace(creatorModel.VocalPreference)
+                || !string.IsNullOrWhiteSpace(creatorModel.AvoidElements)
+                || !string.IsNullOrWhiteSpace(creatorModel.ExtraDirection);
+        }
+
+        return currentQuestionIndex > 0
+            || answers.Count > 0
+            || !string.IsNullOrWhiteSpace(currentAnswer)
+            || !string.IsNullOrWhiteSpace(customReferenceTracks);
+    }
+
+    private sealed class HomageFormModel
+    {
+        public string HonoredSubject { get; set; } = string.Empty;
+        public string PronunciationHint { get; set; } = string.Empty;
+        public string Relationship { get; set; } = string.Empty;
+        public string MentionInLyrics { get; set; } = string.Empty;
+        public string MainFeeling { get; set; } = string.Empty;
+        public string HomageTone { get; set; } = string.Empty;
+        public string RealMemory { get; set; } = string.Empty;
+        public string RepresentationMeaning { get; set; } = string.Empty;
+        public string MessageToSay { get; set; } = string.Empty;
+        public string SongTitle { get; set; } = string.Empty;
+        public string MainStyle { get; set; } = string.Empty;
+        public string Climate { get; set; } = string.Empty;
+        public string VoiceDirection { get; set; } = string.Empty;
+        public string SongLanguage { get; set; } = string.Empty;
+        public string ReferenceSongs { get; set; } = string.Empty;
+        public string Block4OtherStyle { get; set; } = string.Empty;
+        public string Block4Energy { get; set; } = string.Empty;
+        public string Block4BpmMode { get; set; } = string.Empty;
+        public string Block4BpmSpecific { get; set; } = string.Empty;
+        public string Block4Harmonic { get; set; } = string.Empty;
+        public string Block5VocalType { get; set; } = string.Empty;
+        public string Block5Formation { get; set; } = string.Empty;
+        public string Block5Interpretation { get; set; } = string.Empty;
+        public string Block6LyricStyle { get; set; } = string.Empty;
+        public string Block6Complexity { get; set; } = string.Empty;
+        public string Block6Repetition { get; set; } = string.Empty;
+        public string Block6Pauses { get; set; } = string.Empty;
+        public string Block7RealPhrases { get; set; } = string.Empty;
+        public string Block7Slang { get; set; } = string.Empty;
+        public string Block7Places { get; set; } = string.Empty;
+        public string Block7Objects { get; set; } = string.Empty;
+        public string Block7Details { get; set; } = string.Empty;
+        public string Block8StyleReferences { get; set; } = string.Empty;
+        public string Block8SoundFeeling { get; set; } = string.Empty;
+        public string Block8Texture { get; set; } = string.Empty;
+        public string Block8OtherInstrument { get; set; } = string.Empty;
+        public string Block8Dynamics { get; set; } = string.Empty;
+        public string Block9Scene { get; set; } = string.Empty;
+        public string Block9WherePlays { get; set; } = string.Empty;
+        public string Block9FinalEmotion { get; set; } = string.Empty;
+    }
+
+    private sealed class RelaxFormModel
+    {
+        public string TrackTitle { get; set; } = string.Empty;
+        public string PrimaryGoal { get; set; } = string.Empty;
+        public string FinalFeeling { get; set; } = string.Empty;
+        public string OpeningMood { get; set; } = string.Empty;
+        public string UseScene { get; set; } = string.Empty;
+        public string Duration { get; set; } = string.Empty;
+        public string Progression { get; set; } = string.Empty;
+        public string VisualScene { get; set; } = string.Empty;
+        public string MainStyle { get; set; } = string.Empty;
+        public string Energy { get; set; } = string.Empty;
+        public string SoundElements { get; set; } = string.Empty;
+        public string ReferenceTracks { get; set; } = string.Empty;
+        public string VocalPreference { get; set; } = string.Empty;
+        public string AvoidElements { get; set; } = string.Empty;
+        public string ExtraDirection { get; set; } = string.Empty;
+    }
+
+    private sealed class CreatorFormModel
+    {
+        public string TrackTitle { get; set; } = string.Empty;
+        public string VideoType { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public string VideoContext { get; set; } = string.Empty;
+        public string MainEmotion { get; set; } = string.Empty;
+        public string EditPacing { get; set; } = string.Empty;
+        public string KeyMoments { get; set; } = string.Empty;
+        public string ViewerEffect { get; set; } = string.Empty;
+        public string MainStyle { get; set; } = string.Empty;
+        public string Energy { get; set; } = string.Empty;
+        public string SoundElements { get; set; } = string.Empty;
+        public string ReferenceTracks { get; set; } = string.Empty;
+        public string VocalPreference { get; set; } = string.Empty;
+        public string AvoidElements { get; set; } = string.Empty;
+        public string ExtraDirection { get; set; } = string.Empty;
+    }
 }
+
